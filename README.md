@@ -94,6 +94,7 @@ A extensão expõe comandos rápidos que podem ser vinculados a atalhos de tecla
 | `projectOrganizer.expandAll` | Expande recursivamente todas as pastas de grupo na árvore lateral. | `$(list-tree)` |
 | `projectOrganizer.collapseAll` | Colapsa recursivamente todas as pastas de grupo na árvore lateral. | `$(collapse-all)` |
 | `projectOrganizer.editProjectsJson` | Abre o arquivo físico `projects.json` de projetos para edição manual direta. | `$(go-to-file)` |
+| `projectOrganizer.importProjectManager` | Importa de forma manual e inteligente os dados de projetos salvos da extensão antiga Project Manager. | `$(cloud-download)` |
 
 ---
 

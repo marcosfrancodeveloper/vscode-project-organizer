@@ -148,6 +148,88 @@ export class StorageManager {
   }
 
   /**
+   * Importa projetos da extensão popular alefragnani.project-manager.
+   * Se merge for true, mescla os projetos importados com os atuais sem duplicar caminhos.
+   * Se merge for false, substitui a lista atual.
+   * Retorna o número de novos projetos importados.
+   */
+  public async importFromProjectManager(merge: boolean): Promise<number> {
+    const globalStorageRoot = path.dirname(this.context.globalStorageUri.fsPath);
+    const pmProjectsPath = path.join(
+      globalStorageRoot,
+      "alefragnani.project-manager",
+      "projects.json"
+    );
+
+    if (!fs.existsSync(pmProjectsPath)) {
+      throw new Error("Arquivo de projetos do Project Manager não encontrado.");
+    }
+
+    const content = await fs.promises.readFile(pmProjectsPath, "utf-8");
+    const parsed = JSON.parse(content);
+    if (!Array.isArray(parsed) || parsed.length === 0) {
+      throw new Error("O arquivo de projetos do Project Manager está vazio.");
+    }
+
+    const currentProjects = merge ? await this.getProjects() : [];
+    const currentPaths = new Set(currentProjects.map((p) => path.resolve(p.path)));
+    const importedProjects: Project[] = [];
+    let count = 0;
+
+    for (const p of parsed) {
+      const pPath = p.rootPath || p.path;
+      if (typeof pPath !== "string") {
+        continue;
+      }
+      try {
+        const resolvedPath = path.resolve(pPath);
+        if (merge && currentPaths.has(resolvedPath)) {
+          continue; // Pula duplicados
+        }
+
+        const group = Array.isArray(p.tags) && p.tags.length > 0 ? p.tags[0] : undefined;
+        importedProjects.push({
+          id: p.id || Buffer.from(resolvedPath).toString("base64url"),
+          name: p.name || path.basename(resolvedPath) || "Sem Nome",
+          path: resolvedPath,
+          group: group,
+          tags: Array.isArray(p.tags) ? p.tags : undefined,
+          notes: p.notes || undefined,
+          lastAccessed: typeof p.lastAccessed === "number" ? p.lastAccessed : Date.now(),
+        });
+        count++;
+      } catch {
+        // ignora itens inválidos
+      }
+    }
+
+    if (importedProjects.length > 0) {
+      const finalProjects = merge ? [...currentProjects, ...importedProjects] : importedProjects;
+      await this.saveProjects(finalProjects);
+    }
+
+    return count;
+  }
+
+  /**
+   * Tenta migrar projetos da extensão popular alefragnani.project-manager se existirem dados.
+   */
+  private async tryMigrateFromProjectManager(): Promise<Project[] | undefined> {
+    try {
+      const count = await this.importFromProjectManager(false);
+      if (count > 0) {
+        vscode.window.showInformationMessage(
+          `Project Organizer: Migrados ${count} projetos com sucesso da extensão Project Manager.`
+        );
+        return this.getProjects();
+      }
+    } catch {
+      // Ignora erros silenciosamente
+    }
+    return undefined;
+  }
+
+  /**
    * Lê todos os projetos salvos.
    */
   public async getProjects(): Promise<Project[]> {
@@ -185,6 +267,12 @@ export class StorageManager {
           await this.context.globalState.update(StorageManager.STORAGE_KEY, undefined);
           return normalized;
         }
+      }
+
+      // Tenta migração da extensão alefragnani.project-manager
+      const pmMigrated = await this.tryMigrateFromProjectManager();
+      if (pmMigrated) {
+        return pmMigrated;
       }
 
       // Se não há dados migrados e o arquivo está vazio/não existe, inicializa com o template padrão!

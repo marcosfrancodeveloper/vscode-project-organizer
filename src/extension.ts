@@ -612,6 +612,49 @@ export function activate(context: vscode.ExtensionContext) {
     }
   );
   context.subscriptions.push(editProjectsJsonCommand);
+
+  // Comando: Importar do Project Manager
+  const importProjectManagerCommand = vscode.commands.registerCommand(
+    "projectOrganizer.importProjectManager",
+    async () => {
+      const option = await vscode.window.showQuickPick(
+        [
+          {
+            label: "Mesclar (Merge)",
+            description: "Mantém os projetos atuais e adiciona os novos importados.",
+            value: true,
+          },
+          {
+            label: "Substituir (Replace)",
+            description: "Remove todos os projetos atuais e importa apenas os do Project Manager.",
+            value: false,
+          },
+        ],
+        { placeHolder: "Como deseja tratar os projetos importados?" }
+      );
+
+      if (!option) {
+        return; // cancelado
+      }
+
+      try {
+        const count = await storageManager.importFromProjectManager(option.value);
+        if (count > 0) {
+          treeProvider.refresh();
+          vscode.window.showInformationMessage(
+            `Importação concluída! ${count} projetos foram importados com sucesso.`
+          );
+        } else {
+          vscode.window.showInformationMessage(
+            "Nenhum projeto novo foi importado (todos já existem)."
+          );
+        }
+      } catch (err) {
+        vscode.window.showErrorMessage(`Falha na importação: ${(err as Error).message}`);
+      }
+    }
+  );
+  context.subscriptions.push(importProjectManagerCommand);
 }
 
 export function deactivate() {}

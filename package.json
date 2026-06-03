@@ -4,6 +4,10 @@
   "description": "Uma evolução do Project Manager com suporte a múltiplos níveis, visualização integrada de status do Git e busca fuzzy rápida.",
   "version": "1.0.0",
   "publisher": "marcosfranco",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/marcosfrancodeveloper/vscode-project-organizer.git"
+  },
   "engines": {
     "vscode": "^1.75.0"
   },
@@ -105,6 +109,11 @@
         "command": "projectOrganizer.collapseAll",
         "title": "Project Organizer: Collapse All Groups",
         "icon": "$(collapse-all)"
+      },
+      {
+        "command": "projectOrganizer.importProjectManager",
+        "title": "Project Organizer: Import from Project Manager",
+        "icon": "$(cloud-download)"
       }
     ],
     "menus": {
@@ -115,29 +124,34 @@
           "group": "navigation@1"
         },
         {
-          "command": "projectOrganizer.scanProjects",
+          "command": "projectOrganizer.searchProject",
           "when": "view == projectOrganizer.projectsView",
           "group": "navigation@2"
         },
         {
-          "command": "projectOrganizer.searchProject",
+          "command": "projectOrganizer.expandAll",
           "when": "view == projectOrganizer.projectsView",
           "group": "navigation@3"
         },
         {
-          "command": "projectOrganizer.editProjectsJson",
+          "command": "projectOrganizer.collapseAll",
           "when": "view == projectOrganizer.projectsView",
           "group": "navigation@4"
         },
         {
-          "command": "projectOrganizer.expandAll",
+          "command": "projectOrganizer.scanProjects",
           "when": "view == projectOrganizer.projectsView",
-          "group": "navigation@5"
+          "group": "secondary@1"
         },
         {
-          "command": "projectOrganizer.collapseAll",
+          "command": "projectOrganizer.editProjectsJson",
           "when": "view == projectOrganizer.projectsView",
-          "group": "navigation@6"
+          "group": "secondary@2"
+        },
+        {
+          "command": "projectOrganizer.importProjectManager",
+          "when": "view == projectOrganizer.projectsView",
+          "group": "secondary@3"
         }
       ],
       "view/item/context": [
@@ -238,8 +252,9 @@
     "vscode:prepublish": "npm run compile",
     "compile": "node esbuild.js",
     "watch": "node esbuild.js --watch",
-    "package": "vsce package",
-    "publish": "vsce publish"
+    "package": "npx @vscode/vsce package -o project-organizer.vsix",
+    "vscode:install:local": "code --install-extension project-organizer.vsix",
+    "publish": "npx @vscode/vsce publish"
   },
   "devDependencies": {
     "@types/node": "^18.15.0",
