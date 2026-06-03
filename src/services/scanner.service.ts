@@ -1,12 +1,17 @@
 import * as fs from "fs";
 import * as path from "path";
-import { Project } from "./types";
+import { Project } from "../interfaces/models.interface";
+import { IProjectScanner } from "../interfaces/services.interface";
 
-export class ProjectScanner {
+/**
+ * Serviço que escaneia diretórios físicos à procura de marcações de projeto (ex: .git, package.json).
+ * Implementa a interface IProjectScanner.
+ */
+export class ProjectScanner implements IProjectScanner {
   /**
-   * Varre recursivamente um caminho base à procura de diretórios de projetos.
+   * Varre um caminho recursivamente procurando marcadores de projetos (ex: `.git`, `package.json`).
    */
-  public static async scan(
+  public async scan(
     basePath: string,
     maxDepth: number,
     ignoredFolders: string[]
@@ -20,7 +25,10 @@ export class ProjectScanner {
 
     const ignoredSet = new Set(ignoredFolders);
 
-    async function walk(currentPath: string, depth: number) {
+    /**
+     * Função recursiva de leitura interna de pastas locais.
+     */
+    const walk = async (currentPath: string, depth: number) => {
       if (depth > maxDepth) {
         return;
       }
@@ -32,9 +40,8 @@ export class ProjectScanner {
 
         // 1. Verificar se o próprio diretório atual é um projeto
         let isProject = false;
-        let projectName = path.basename(currentPath);
+        const projectName = path.basename(currentPath);
 
-        // Marcadores de projeto
         const hasGit = entries.some(
           (e) => e.isDirectory() && e.name === ".git"
         );
@@ -50,7 +57,7 @@ export class ProjectScanner {
         }
 
         if (isProject) {
-          // Calcula o grupo a partir do caminho relativo em relação ao basePath
+          // Calcula o grupo a partir do caminho relativo ao basePath
           let groupPath: string | undefined = undefined;
           const relative = path.relative(resolvedBase, currentPath);
           const parentDir = path.dirname(relative);
@@ -66,11 +73,11 @@ export class ProjectScanner {
             group: groupPath,
           });
 
-          // Se é um projeto, interrompe a recursão neste galho
+          // Se é um projeto, interrompe a recursão nesta ramificação
           return;
         }
 
-        // 2. Se não é projeto, continuar escaneando subdiretórios recursivamente
+        // 2. Se não for projeto, continua escaneando os subdiretórios recursivamente
         for (const entry of entries) {
           if (entry.isDirectory() && !ignoredSet.has(entry.name)) {
             const nextPath = path.join(currentPath, entry.name);
@@ -78,9 +85,9 @@ export class ProjectScanner {
           }
         }
       } catch (err) {
-        // Ignora erros de permissão ou leitura de diretório
+        // Ignora erros de permissão de leitura de subdiretório
       }
-    }
+    };
 
     await walk(resolvedBase, 1);
     return projects;

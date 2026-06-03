@@ -5,104 +5,103 @@
 <h1 align="center">Project Organizer</h1>
 
 <p align="center">
-  <strong>A evolução definitiva no gerenciamento de workspaces para VS Code. Organização hierárquica multinível, status de Git assíncrono em tempo real, notas descritivas e busca ultra-rápida.</strong>
+  <strong>The definitive workspace manager evolution for VS Code. Multilevel hierarchical organization, real-time asynchronous Git status, descriptive notes, and ultra-fast search.</strong>
 </p>
 
 <p align="center">
   <a href="https://marketplace.visualstudio.com/items?itemName=marcosfranco.project-organizer">
-    <img src="https://vsmarketplacebadges.dev/version-short/marcosfranco.project-organizer.svg" alt="Versão do Marketplace" />
+    <img src="https://vsmarketplacebadges.dev/version-short/marcosfranco.project-organizer.svg" alt="Marketplace Version" />
   </a>
   <a href="https://marketplace.visualstudio.com/items?itemName=marcosfranco.project-organizer">
     <img src="https://vsmarketplacebadges.dev/downloads-short/marcosfranco.project-organizer.svg" alt="Downloads" />
   </a>
   <a href="https://marketplace.visualstudio.com/items?itemName=marcosfranco.project-organizer">
-    <img src="https://vsmarketplacebadges.dev/rating-short/marcosfranco.project-organizer.svg" alt="Avaliação" />
+    <img src="https://vsmarketplacebadges.dev/rating-short/marcosfranco.project-organizer.svg" alt="Rating" />
   </a>
-  <img src="https://img.shields.io/badge/Language-TypeScript-blue?logo=typescript" alt="Linguagem" />
-  <img src="https://img.shields.io/badge/License-MIT-green" alt="Licença" />
+  <img src="https://img.shields.io/badge/Language-TypeScript-blue?logo=typescript" alt="Language" />
+  <img src="https://img.shields.io/badge/License-GPLv3-blue.svg" alt="License" />
 </p>
 
 ---
 
-O **Project Organizer** é a solução ideal para desenvolvedores que trabalham com múltiplos repositórios e projetos simultaneamente. Diferente de gerenciadores de projetos tradicionais de lista única (flat list), ele introduz uma **estrutura de árvore organizacional multinível** baseada em caminhos hierárquicos e um monitor de Git assíncrono em segundo plano para que você saiba o status de todos os seus repositórios diretamente no painel lateral, sem precisar abri-los.
+**Project Organizer** is the ideal solution for developers working with multiple repositories and projects simultaneously. Unlike traditional single-list (flat list) project managers, it introduces a **multilevel organizational tree structure** based on hierarchical paths and an **asynchronous background Git monitor** so you can see the status of all your repositories directly in the side panel, without needing to open them.
 
 ---
 
-## 🔥 O que há de novo no Project Organizer 
+## 🔥 What's New in Project Organizer
 
-*   📂 **Suporte a Grupos Multiníveis Dinâmicos:** Classifique e organize seus projetos em árvores de subpastas infinitas utilizando barras `/` (ex: `Trabalho/Cliente-A/Frontend`).
-*   🌿 **Monitoramento do Git em Background:** Veja de forma assíncrona qual branch está ativa e se há arquivos modificados (`• *`) ou commits locais não enviados (`↑N`).
-*   🎯 **Persistência de Expansão Global:** Botões de Expandir Tudo (`expand-all`) e Colapsar Tudo (`collapse-all`) integrados que salvam as preferências do usuário no nível global da IDE (`settings.json`).
-*   🏷️ **Organização com Tags:** Adicione marcadores personalizados no seu `projects.json` e busque seus projetos de forma instantânea usando as tags no Quick Open.
-*   📝 **Notas de Projeto em Markdown:** Registre observações importantes e visualize-as formatadas em balões de tooltip ao pairar o mouse sobre os projetos.
-
----
-
-## 🚀 Principais Recursos
-
-### 📂 Estrutura Hierárquica em Árvore
-Diga adeus a listas desordenadas de projetos. No Project Organizer, você pode atribuir qualquer nível de hierarquia a um projeto. 
-Basta categorizar seu projeto com um grupo como `Empresa/Sistemas/API` para que a extensão crie a estrutura de diretórios aninhados colapsáveis na barra lateral de forma nativa e limpa.
-
-### 🌿 Visão Rápida do Git
-Evite a necessidade de navegar de diretório em diretório para verificar o status de branches. O Project Organizer checa assintomaticamente seus projetos e insere indicadores na árvore:
-*   **Nome do Branch ativo** (ex: `main`, `develop`, `feature/login`).
-*   **Estado de modificação (`• *`)** se houver arquivos com alterações pendentes de commit.
-*   **Commits locais a enviar (`↑3`)** se houver commits criados localmente ainda não enviados ao repositório remoto.
-
-### 🔍 Paleta de Busca Fuzzy Avançada (Quick Open)
-Acesse todos os seus projetos pressionando um atalho rápido ou chamando a busca de projetos. Os projetos são ordenados por **Último Acesso (LRU)** e você pode filtrar por:
-*   Nome do projeto
-*   Caminho físico no disco
-*   Grupo/Subgrupo organizacional
-*   Tags associadas
-
-### 📝 Notas e Metadados do Projeto
-Mantenha lembretes úteis sempre por perto (ex: porta do banco de dados local, dependências especiais a iniciar, links rápidos de documentação). O Project Organizer renderiza notas usando blocos de Markdown amigáveis no Tooltip nativo da IDE ao deixar o cursor sobre o projeto.
+*   📂 **Dynamic Multilevel Groups Support:** Classify and organize your projects in infinite subfolder trees using slashes `/` (e.g., `Work/Client-A/Frontend`).
+*   🌿 **Background Git Monitoring:** Asynchronously view which branch is active and whether there are modified files (`• *`) or local commits not pushed (`↑N`).
+*   🎯 **Global Expansion Persistence:** Built-in Expand All (`expand-all`) and Collapse All (`collapse-all`) buttons that save user preferences at the IDE global level (`settings.json`).
+*   🏷️ **Organization with Tags:** Add custom tags in your `projects.json` and search your projects instantly using tags in Quick Open.
+*   📝 **Markdown Project Notes:** Write down important notes and view them formatted in tooltip bubbles when hovering over projects.
 
 ---
 
-## 🛠️ Configurações da Extensão
+## 🚀 Key Features
 
-Você pode configurar a extensão abrindo as configurações do VS Code (`Ctrl+,` ou `Cmd+,`) e procurando por `Project Organizer`:
+### 📂 Hierarchical Tree Structure
+Say goodbye to cluttered project lists. In Project Organizer, you can assign any hierarchy level to a project. Just categorize your project with a group like `Company/Systems/API` and the extension will natively and cleanly create the nested collapsible directory structure in the sidebar.
 
-| Configuração | Tipo | Padrão | Descrição |
+### 🌿 Quick Git View
+Avoid the need to navigate from directory to directory to check branch status. Project Organizer asynchronously checks your projects and inserts indicators in the tree:
+*   **Active Branch name** (e.g., `main`, `develop`, `feature/login`).
+*   **Modification state (`• *`)** if there are files with pending changes to commit.
+*   **Local commits to push (`↑3`)** if there are commits created locally not yet pushed to the remote repository.
+
+### 🔍 Advanced Fuzzy Search Palette (Quick Open)
+Access all your projects by pressing a quick shortcut or calling the project search. Projects are sorted by Last Accessed (LRU) and you can filter by:
+*   Project name
+*   Physical path on disk
+*   Organizational group/subgroup
+*   Associated tags
+
+### 📝 Project Notes and Metadata
+Keep useful reminders close at hand (e.g., local database port, special dependencies to start, quick documentation links). Project Organizer renders notes using friendly Markdown blocks in the IDE's native Tooltip when you hover over the project.
+
+---
+
+## 🛠️ Extension Settings
+
+You can configure the extension by opening VS Code Settings (`Ctrl+,` or `Cmd+,`) and searching for `Project Organizer`:
+
+| Setting | Type | Default | Description |
 | :--- | :--- | :--- | :--- |
-| `projectOrganizer.scanPaths` | `string[]` | `[]` | Lista de diretórios locais que a extensão deve varrer à procura de projetos/repositórios. |
-| `projectOrganizer.scanDepth` | `number` | `3` | Profundidade máxima de leitura recursiva ao escanear pastas base. |
-| `projectOrganizer.ignoredFolders` | `string[]` | `["node_modules", "dist", ".git", "bin", "tmp"]` | Pastas ignoradas na varredura recursiva para aumentar a performance. |
-| `projectOrganizer.gitStatusEnabled` | `boolean` | `true` | Habilita a checagem em segundo plano e renderização do status do Git. |
-| `projectOrganizer.gitStatusInterval` | `number` | `15000` | Intervalo em milissegundos para re-checar alterações de Git. |
-| `projectOrganizer.customProjectsFile` | `string` | `""` | Caminho personalizado para o arquivo `projects.json` (útil para sincronização em nuvem). |
-| `projectOrganizer.treeExpanded` | `boolean` | `false` | Preferência global sobre se a árvore lateral deve iniciar totalmente expandida ou colapsada. |
+| `projectOrganizer.scanPaths` | `string[]` | `[]` | List of local directories that the extension should scan looking for projects/repositories. |
+| `projectOrganizer.scanDepth` | `number` | `3` | Maximum recursive read depth when scanning base folders. |
+| `projectOrganizer.ignoredFolders` | `string[]` | `["node_modules", "dist", ".git", "bin", "tmp"]` | Folders ignored during recursive scanning to increase performance. |
+| `projectOrganizer.gitStatusEnabled` | `boolean` | `true` | Enables background checking and rendering of Git status. |
+| `projectOrganizer.gitStatusInterval` | `number` | `15000` | Interval in milliseconds to recheck Git changes. |
+| `projectOrganizer.customProjectsFile` | `string` | `""` | Custom path to the `projects.json` file (useful for cloud synchronization). |
+| `projectOrganizer.treeExpanded` | `boolean` | `false` | Global preference on whether the side tree should start fully expanded or collapsed. |
 
 ---
 
-## ⌨️ Comandos Disponíveis
+## ⌨️ Available Commands
 
-A extensão expõe comandos rápidos que podem ser vinculados a atalhos de teclado no seu `keybindings.json`:
+The extension exposes quick commands that can be bound to keyboard shortcuts in your `keybindings.json`:
 
-| Comando | Descrição | Ícone UI |
+| Command | Description | UI Icon |
 | :--- | :--- | :---: |
-| `projectOrganizer.refresh` | Atualiza manualmente a lista de projetos e o status do Git. | `$(refresh)` |
-| `projectOrganizer.searchProject` | Abre a busca rápida fuzzy com filtro de tags e caminhos (Quick Open). | `$(list-filter)` |
-| `projectOrganizer.scanProjects` | Executa o escaneamento nas pastas configuradas em `scanPaths`. | `$(search)` |
-| `projectOrganizer.addProject` | Salva o workspace/projeto atualmente aberto na lista. | — |
-| `projectOrganizer.addProjectFolder` | Abre o seletor nativo para adicionar qualquer pasta local do sistema. | — |
-| `projectOrganizer.removeProject` | Remove o projeto selecionado da lista. | `$(trash)` |
-| `projectOrganizer.renameProject` | Permite alterar o nome de exibição ou o grupo (caminho com `/`). | `$(edit)` |
-| `projectOrganizer.expandAll` | Expande recursivamente todas as pastas de grupo na árvore lateral. | `$(list-tree)` |
-| `projectOrganizer.collapseAll` | Colapsa recursivamente todas as pastas de grupo na árvore lateral. | `$(collapse-all)` |
-| `projectOrganizer.editProjectsJson` | Abre o arquivo físico `projects.json` de projetos para edição manual direta. | `$(go-to-file)` |
-| `projectOrganizer.importProjectManager` | Importa de forma manual e inteligente os dados de projetos salvos da extensão antiga Project Manager. | `$(cloud-download)` |
+| `projectOrganizer.refresh` | Manually updates the project list and Git status. | `$(refresh)` |
+| `projectOrganizer.searchProject` | Opens the quick fuzzy search with tag and path filtering (Quick Open). | `$(list-filter)` |
+| `projectOrganizer.scanProjects` | Runs the scan in the folders configured in `scanPaths`. | `$(search)` |
+| `projectOrganizer.addProject` | Saves the currently open workspace/project in the list. | — |
+| `projectOrganizer.addProjectFolder` | Opens the native picker to add any local system folder. | — |
+| `projectOrganizer.removeProject` | Removes the selected project from the list. | `$(trash)` |
+| `projectOrganizer.renameProject` | Allows changing the display name or group (path with `/`). | `$(edit)` |
+| `projectOrganizer.expandAll` | Recursively expands all group folders in the side tree. | `$(list-tree)` |
+| `projectOrganizer.collapseAll` | Recursively collapses all group folders in the side tree. | `$(collapse-all)` |
+| `projectOrganizer.editProjectsJson` | Opens the physical `projects.json` file for direct manual editing. | `$(go-to-file)` |
+| `projectOrganizer.importProjectManager` | Manually and intelligently imports saved project data from the old Project Manager extension. | `$(cloud-download)` |
 
 ---
 
-## 📂 Estrutura do Arquivo `projects.json`
+## 📂 `projects.json` File Structure
 
-O arquivo `projects.json` é estruturado de forma intuitiva, permitindo que você adicione tags, notas, ordene ou limpe dados facilmente.
+The `projects.json` file is structured intuitively, allowing you to easily add tags, notes, sort, or clean data.
 
-Exemplo de estrutura:
+Structure example:
 ```json
 [
   {
@@ -110,7 +109,7 @@ Exemplo de estrutura:
     "name": "My Library",
     "path": "/Users/myuser/projects/client/my-lib",
     "group": "client/my-lib",
-    "notes": "TODO: Atualizar dependências e rodar migrações do banco local",
+    "notes": "TODO: Update dependencies and run migrations of the local database",
     "tags": ["nest", "library"],
     "lastAccessed": 1780433838030
   },
@@ -127,26 +126,6 @@ Exemplo de estrutura:
 
 ---
 
-## 🧑‍💻 Desenvolvimento e Extensibilidade
+## 📄 License
 
-Caso queira contribuir para a extensão ou rodar um ambiente local de depuração:
-
-1.  Clone este repositório:
-    ```bash
-    git clone https://github.com/marcosfranco/project-organizer.git
-    ```
-2.  Instale as dependências:
-    ```bash
-    npm install
-    ```
-3.  Compile o projeto (a compilação utiliza o `esbuild` de forma rápida):
-    ```bash
-    npm run compile
-    ```
-4.  Abra o diretório no VS Code e pressione `F5` para iniciar o depurador no **Extension Development Host**.
-
----
-
-## 📄 Licença
-
-Este projeto é licenciado sob a [MIT License](LICENSE).
+This project is licensed under the [GNU General Public License v3](LICENSE.md).

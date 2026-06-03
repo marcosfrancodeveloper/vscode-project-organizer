@@ -1,21 +1,30 @@
 import * as vscode from "vscode";
 import * as fs from "fs";
 import * as path from "path";
-import { Project } from "./types";
+import { Project } from "../interfaces/models.interface";
+import { IStorageManager } from "../interfaces/services.interface";
 
-export class StorageManager {
+/**
+ * Gerenciador de persistência dos projetos e importação de extensões legadas.
+ * Implementa a interface IStorageManager.
+ */
+export class StorageService implements IStorageManager {
   private static readonly STORAGE_KEY = "projectOrganizer.projects";
 
+  /**
+   * Inicializa o serviço de persistência.
+   * @param context Contexto global da extensão do VS Code.
+   */
   constructor(private context: vscode.ExtensionContext) {}
 
   /**
-   * Obtém o caminho do arquivo de persistência customizado se configurado.
+   * Obtém o caminho do arquivo de persistência customizado se configurado pelo usuário nas configurações globais.
+   * @returns Caminho absoluto ou `undefined` se não configurado.
    */
   private getCustomFilePath(): string | undefined {
     const config = vscode.workspace.getConfiguration("projectOrganizer");
     const filePath = config.get<string>("customProjectsFile");
     if (filePath && filePath.trim() !== "") {
-      // Resolve caminhos com ~ para o home directory
       if (filePath.startsWith("~/")) {
         const home = process.env.HOME || process.env.USERPROFILE || "";
         return path.join(home, filePath.slice(2));
@@ -26,20 +35,19 @@ export class StorageManager {
   }
 
   /**
-   * Retorna o caminho definitivo do arquivo de projetos ativo (customizado ou local padrão).
+   * Retorna o caminho definitivo do arquivo de projetos ativo (customizado ou local padrão no globalStorage).
    */
   public getProjectsFilePath(): string {
     const customPath = this.getCustomFilePath();
     if (customPath) {
       return customPath;
     }
-    // Caso padrão: salva na pasta de globalStorage da extensão
     const dir = this.context.globalStorageUri.fsPath;
     return path.join(dir, "projects.json");
   }
 
   /**
-   * Retorna os dados do template padrão.
+   * Retorna os dados do template inicial padrão caso não existam projetos cadastrados.
    */
   public static getDefaultTemplate(): Project[] {
     return [
@@ -71,7 +79,7 @@ export class StorageManager {
   }
 
   /**
-   * Converte a estrutura aninhada do JSON para uma lista plana de projetos.
+   * Converte a estrutura aninhada do arquivo JSON físico para uma lista plana de projetos em memória.
    */
   private parseNestedRegistry(obj: any): Project[] {
     const projects: Project[] = [];
@@ -85,7 +93,6 @@ export class StorageManager {
         const val = currentObj[key];
         if (val && typeof val === "object") {
           if (typeof val.path === "string") {
-            // É um projeto!
             const groupPath = currentGroupParts.join("/");
             projects.push({
               id: val.id || Buffer.from(path.resolve(val.path)).toString("base64url"),
@@ -95,9 +102,9 @@ export class StorageManager {
               tags: Array.isArray(val.tags) ? val.tags : undefined,
               notes: val.notes || undefined,
               lastAccessed: typeof val.lastAccessed === "number" ? val.lastAccessed : Date.now(),
+              favorite: typeof val.favorite === "boolean" ? val.favorite : undefined,
             });
           } else {
-            // É um subgrupo!
             walk(val, [...currentGroupParts, key]);
           }
         }
@@ -109,7 +116,7 @@ export class StorageManager {
   }
 
   /**
-   * Converte a lista plana de projetos para a estrutura de objetos aninhados (pastas e projetos).
+   * Converte a lista plana de projetos para a estrutura de objetos aninhados (pastas e projetos) no formato JSON físico.
    */
   private serializeNestedRegistry(projects: Project[]): any {
     const root: any = {};
@@ -141,6 +148,7 @@ export class StorageManager {
         tags: project.tags && project.tags.length > 0 ? project.tags : undefined,
         lastAccessed: project.lastAccessed,
         id: project.id,
+        favorite: project.favorite || undefined,
       };
     }
 
@@ -149,9 +157,6 @@ export class StorageManager {
 
   /**
    * Importa projetos da extensão popular alefragnani.project-manager.
-   * Se merge for true, mescla os projetos importados com os atuais sem duplicar caminhos.
-   * Se merge for false, substitui a lista atual.
-   * Retorna o número de novos projetos importados.
    */
   public async importFromProjectManager(merge: boolean): Promise<number> {
     const globalStorageRoot = path.dirname(this.context.globalStorageUri.fsPath);
@@ -184,7 +189,7 @@ export class StorageManager {
       try {
         const resolvedPath = path.resolve(pPath);
         if (merge && currentPaths.has(resolvedPath)) {
-          continue; // Pula duplicados
+          continue;
         }
 
         const group = Array.isArray(p.tags) && p.tags.length > 0 ? p.tags[0] : undefined;
@@ -212,14 +217,14 @@ export class StorageManager {
   }
 
   /**
-   * Tenta migrar projetos da extensão popular alefragnani.project-manager se existirem dados.
+   * Tenta migrar automaticamente projetos da extensão alefragnani.project-manager.
    */
   private async tryMigrateFromProjectManager(): Promise<Project[] | undefined> {
     try {
       const count = await this.importFromProjectManager(false);
       if (count > 0) {
         vscode.window.showInformationMessage(
-          `Project Organizer: Migrados ${count} projetos com sucesso da extensão Project Manager.`
+          vscode.l10n.t("Project Organizer: Successfully migrated {0} projects from Project Manager extension.", count)
         );
         return this.getProjects();
       }
@@ -230,7 +235,7 @@ export class StorageManager {
   }
 
   /**
-   * Lê todos os projetos salvos.
+   * Lê todos os projetos registrados na base de dados de forma assíncrona.
    */
   public async getProjects(): Promise<Project[]> {
     const filePath = this.getProjectsFilePath();
@@ -240,14 +245,12 @@ export class StorageManager {
         const content = await fs.promises.readFile(filePath, "utf-8");
         const parsed = JSON.parse(content);
         if (Array.isArray(parsed)) {
-          // Formato antigo plano: converte para o novo formato aninhado
           const flatProjects = this.normalizeProjects(parsed);
           if (flatProjects.length > 0) {
             await this.saveProjects(flatProjects);
             return flatProjects;
           }
         } else if (parsed && typeof parsed === "object") {
-          // Novo formato aninhado
           const flatProjects = this.parseNestedRegistry(parsed);
           if (flatProjects.length > 0) {
             return this.normalizeProjects(flatProjects);
@@ -255,16 +258,16 @@ export class StorageManager {
         }
       }
 
-      // Se o arquivo não existir ou se estiver vazio, tenta fazer migração do globalState
+      // Migração de dados legados do globalState se o arquivo físico não existir
       const customPath = this.getCustomFilePath();
       if (!customPath) {
         const oldProjects = this.context.globalState.get<any[]>(
-          StorageManager.STORAGE_KEY
+          StorageService.STORAGE_KEY
         );
         if (oldProjects && Array.isArray(oldProjects) && oldProjects.length > 0) {
           const normalized = this.normalizeProjects(oldProjects);
           await this.saveProjects(normalized);
-          await this.context.globalState.update(StorageManager.STORAGE_KEY, undefined);
+          await this.context.globalState.update(StorageService.STORAGE_KEY, undefined);
           return normalized;
         }
       }
@@ -275,13 +278,13 @@ export class StorageManager {
         return pmMigrated;
       }
 
-      // Se não há dados migrados e o arquivo está vazio/não existe, inicializa com o template padrão!
-      const template = StorageManager.getDefaultTemplate();
+      // Inicializa com o template inicial
+      const template = StorageService.getDefaultTemplate();
       await this.saveProjects(template);
       return template;
     } catch (err) {
       vscode.window.showErrorMessage(
-        `Erro ao ler arquivo de projetos: ${(err as Error).message}`
+        vscode.l10n.t("Error reading projects file: {0}", (err as Error).message)
       );
     }
 
@@ -289,7 +292,7 @@ export class StorageManager {
   }
 
   /**
-   * Salva a lista de projetos.
+   * Salva toda a lista de projetos na base de dados.
    */
   public async saveProjects(projects: Project[]): Promise<void> {
     const filePath = this.getProjectsFilePath();
@@ -307,13 +310,13 @@ export class StorageManager {
       );
     } catch (err) {
       vscode.window.showErrorMessage(
-        `Erro ao salvar projetos: ${(err as Error).message}`
+        vscode.l10n.t("Error saving projects: {0}", (err as Error).message)
       );
     }
   }
 
   /**
-   * Adiciona um novo projeto.
+   * Adiciona um novo projeto à lista.
    */
   public async addProject(
     name: string,
@@ -323,12 +326,13 @@ export class StorageManager {
     const projects = await this.getProjects();
     const resolvedPath = path.resolve(projectPath);
 
-    // Evita duplicatas pelo caminho
     const existing = projects.find(
       (p) => path.resolve(p.path) === resolvedPath
     );
     if (existing) {
-      throw new Error(`O projeto já existe: ${existing.name} (${existing.path})`);
+      throw new Error(
+        vscode.l10n.t("Project already exists: {0} ({1})", existing.name, existing.path)
+      );
     }
 
     const newProject: Project = {
@@ -345,7 +349,7 @@ export class StorageManager {
   }
 
   /**
-   * Remove um projeto pelo ID.
+   * Remove um projeto permanentemente da base.
    */
   public async removeProject(id: string): Promise<void> {
     const projects = await this.getProjects();
@@ -354,7 +358,7 @@ export class StorageManager {
   }
 
   /**
-   * Atualiza os dados de um projeto existente.
+   * Atualiza propriedades parciais de um projeto existente.
    */
   public async updateProject(
     id: string,
@@ -364,11 +368,10 @@ export class StorageManager {
     const index = projects.findIndex((p) => p.id === id);
 
     if (index === -1) {
-      throw new Error("Projeto não encontrado.");
+      throw new Error(vscode.l10n.t("Project not found."));
     }
 
     const oldProject = projects[index];
-    // Só atualiza o grupo se a propriedade foi explicitamente enviada no updates
     let group = updates.group !== undefined ? updates.group : oldProject.group;
     if (group !== undefined) {
       group = group.trim() !== "" ? group.trim() : undefined;
@@ -384,7 +387,7 @@ export class StorageManager {
   }
 
   /**
-   * Garante consistência de tipos e id para dados antigos ou importados.
+   * Normaliza dados dos projetos garantindo IDs e consistência estrutural.
    */
   private normalizeProjects(projects: any[]): Project[] {
     if (!Array.isArray(projects)) {
@@ -405,6 +408,7 @@ export class StorageManager {
           tags: Array.isArray(p.tags) ? p.tags : undefined,
           notes: p.notes || undefined,
           lastAccessed: typeof p.lastAccessed === "number" ? p.lastAccessed : Date.now(),
+          favorite: typeof p.favorite === "boolean" ? p.favorite : undefined,
         });
       } catch {
         // Ignora itens inválidos

@@ -1,19 +1,27 @@
 import { exec } from "child_process";
 import * as path from "path";
 import * as fs from "fs";
-import { GitStatus } from "./types";
+import { GitStatus } from "../interfaces/models.interface";
+import { IGitService } from "../interfaces/services.interface";
 
-export class GitService {
+/**
+ * Serviço responsável por monitorar o status do controle de versão Git nos repositórios locais.
+ * Implementa a interface IGitService.
+ */
+export class GitService implements IGitService {
   /**
-   * Executa um comando do Git em um diretório e retorna o resultado.
+   * Executa internamente comandos Git usando subprocessos de forma segura.
+   * @param gitDirPath Diretório raiz do repositório Git.
+   * @param args Argumentos que compõem o comando Git (ex: ["status", "--porcelain"]).
+   * @param timeout Limite de tempo em milissegundos para forçar o encerramento do processo.
+   * @returns Retorno formatado do stdout do comando executado.
    */
-  private static runGitCommand(
+  private runGitCommand(
     gitDirPath: string,
     args: string[],
     timeout = 2000
   ): Promise<string> {
     return new Promise((resolve, reject) => {
-      // Reconhece executável git
       const command = `git ${args.join(" ")}`;
       exec(
         command,
@@ -21,7 +29,7 @@ export class GitService {
           cwd: gitDirPath,
           timeout: timeout,
         },
-        (error, stdout, stderr) => {
+        (error, stdout, _stderr) => {
           if (error) {
             reject(error);
             return;
@@ -33,9 +41,9 @@ export class GitService {
   }
 
   /**
-   * Verifica se um diretório é um repositório Git ativo.
+   * Verifica se o diretório do projeto possui um repositório Git inicializado.
    */
-  public static isGitRepository(projectPath: string): boolean {
+  public isGitRepository(projectPath: string): boolean {
     if (!projectPath || typeof projectPath !== "string") {
       return false;
     }
@@ -48,15 +56,15 @@ export class GitService {
   }
 
   /**
-   * Obtém o status do Git de um repositório.
+   * Executa comandos assíncronos para obter o status atual do Git em um repositório.
    */
-  public static async getStatus(projectPath: string): Promise<GitStatus | null> {
+  public async getStatus(projectPath: string): Promise<GitStatus | null> {
     if (!this.isGitRepository(projectPath)) {
       return null;
     }
 
     try {
-      // 1. Obter a branch atual (com fallback para detached head)
+      // 1. Obter a branch atual (com fallback para detached HEAD)
       let branch = "HEAD";
       try {
         branch = await this.runGitCommand(projectPath, [
@@ -85,9 +93,11 @@ export class GitService {
           "--porcelain",
         ]);
         isDirty = statusOutput.length > 0;
-      } catch {}
+      } catch {
+        // Ignora erros
+      }
 
-      // 3. Verificar commits pendentes de envio (unpushed)
+      // 3. Verificar se há commits pendentes de envio para o remoto
       let unpushed = 0;
       try {
         const unpushedOutput = await this.runGitCommand(projectPath, [
@@ -100,7 +110,7 @@ export class GitService {
           unpushed = 0;
         }
       } catch {
-        // Se falhar (ex: não há remoto configurado), unpushed fica 0
+        // Se falhar (ex: branch sem upstream remoto), unpushed permanece 0
         unpushed = 0;
       }
 
@@ -111,7 +121,7 @@ export class GitService {
         lastChecked: Date.now(),
       };
     } catch (err) {
-      // Qualquer erro severo retorna null
+      // Erro severo retorna null
       return null;
     }
   }
