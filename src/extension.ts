@@ -14,11 +14,113 @@ export function activate(context: vscode.ExtensionContext) {
   // Registrar Tree View
   const treeView = vscode.window.createTreeView("projectOrganizer.projectsView", {
     treeDataProvider: treeProvider,
-    showCollapseAll: true,
+    showCollapseAll: false,
   });
 
   context.subscriptions.push(treeView);
   context.subscriptions.push(treeProvider);
+
+  // Monitorar alterações físicas no arquivo projects.json para recarregar a lista no 'Save'
+  let fileWatcher: vscode.FileSystemWatcher | undefined;
+
+  function setupWatcher() {
+    if (fileWatcher) {
+      fileWatcher.dispose();
+    }
+    const filePath = storageManager.getProjectsFilePath();
+    fileWatcher = vscode.workspace.createFileSystemWatcher(filePath);
+    fileWatcher.onDidChange(() => treeProvider.refresh());
+    fileWatcher.onDidCreate(() => treeProvider.refresh());
+    fileWatcher.onDidDelete(() => treeProvider.refresh());
+    context.subscriptions.push(fileWatcher);
+  }
+
+  setupWatcher();
+
+  // Recriar o monitor se o caminho customizado do arquivo mudar nas configurações
+  const configWatcher = vscode.workspace.onDidChangeConfiguration((e) => {
+    if (e.affectsConfiguration("projectOrganizer.customProjectsFile")) {
+      setupWatcher();
+      treeProvider.refresh();
+    } else if (e.affectsConfiguration("projectOrganizer.treeExpanded")) {
+      treeProvider.refresh();
+    }
+  });
+  context.subscriptions.push(configWatcher);
+
+  // Comando: Expandir todas as pastas de grupos
+  const expandAllCommand = vscode.commands.registerCommand(
+    "projectOrganizer.expandAll",
+    async () => {
+      // 1. Atualiza a configuração global para true
+      await vscode.workspace
+        .getConfiguration("projectOrganizer")
+        .update("treeExpanded", true, vscode.ConfigurationTarget.Global);
+
+      try {
+        const projects = await storageManager.getProjects();
+        const groups = new Set<string>();
+        for (const p of projects) {
+          if (p.group) {
+            const parts = p.group.split("/");
+            let pathAcc = "";
+            for (const part of parts) {
+              pathAcc = pathAcc ? `${pathAcc}/${part}` : part;
+              groups.add(pathAcc);
+            }
+          }
+        }
+
+        // Ordena os caminhos de grupo pelo nível de profundidade (mais rasos primeiro)
+        // Isso garante que os pais sejam carregados no VS Code antes de expandir os filhos
+        const sortedGroups = Array.from(groups).sort((a, b) => {
+          return a.split("/").length - b.split("/").length;
+        });
+
+        for (const g of sortedGroups) {
+          const parts = g.split("/");
+          const name = parts[parts.length - 1];
+          const item = new ProjectTreeItem(
+            name,
+            vscode.TreeItemCollapsibleState.Expanded,
+            "group",
+            undefined,
+            g
+          );
+
+          await treeView.reveal(item, {
+            expand: true,
+            select: false,
+            focus: false,
+          });
+        }
+      } catch (err) {
+        // Ignora erros silenciosamente se o TreeView ainda não estiver visível ou carregado
+      }
+    }
+  );
+  context.subscriptions.push(expandAllCommand);
+
+  // Comando: Colapsar todas as pastas de grupos
+  const collapseAllCommand = vscode.commands.registerCommand(
+    "projectOrganizer.collapseAll",
+    async () => {
+      // 1. Atualiza a configuração global para false
+      await vscode.workspace
+        .getConfiguration("projectOrganizer")
+        .update("treeExpanded", false, vscode.ConfigurationTarget.Global);
+
+      // 2. Executa o comando interno do VS Code para colapsar visualmente a árvore
+      try {
+        await vscode.commands.executeCommand(
+          "workbench.actions.treeView.projectOrganizer.projectsView.collapseAll"
+        );
+      } catch (err) {
+        // Ignora erros silenciosamente
+      }
+    }
+  );
+  context.subscriptions.push(collapseAllCommand);
 
   // Comando: Atualizar Lista
   const refreshCommand = vscode.commands.registerCommand(
@@ -393,9 +495,16 @@ export function activate(context: vscode.ExtensionContext) {
         if (p.group) {
           label = `$(folder) [${p.group}] ${p.name}`;
         }
+
+        let description = p.path;
+        if (p.tags && p.tags.length > 0) {
+          description += ` • $(tag) ${p.tags.join(", ")}`;
+        }
+
         return {
           label,
-          description: p.path,
+          description,
+          detail: p.notes, // Exibe as notas do projeto no seletor rápido
           project: p,
         };
       });

@@ -279,14 +279,15 @@ export class StorageManager {
       throw new Error("Projeto não encontrado.");
     }
 
-    // Sanitiza grupo se enviado
-    let group = updates.group;
+    const oldProject = projects[index];
+    // Só atualiza o grupo se a propriedade foi explicitamente enviada no updates
+    let group = updates.group !== undefined ? updates.group : oldProject.group;
     if (group !== undefined) {
       group = group.trim() !== "" ? group.trim() : undefined;
     }
 
     projects[index] = {
-      ...projects[index],
+      ...oldProject,
       ...updates,
       group,
     };

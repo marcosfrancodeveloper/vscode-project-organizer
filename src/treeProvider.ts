@@ -17,19 +17,41 @@ export class ProjectTreeItem extends vscode.TreeItem {
     this.contextValue = type;
 
     if (type === "project" && project) {
-      this.resourceUri = vscode.Uri.file(project.path);
-      this.tooltip = `Nome: ${project.name}\nCaminho: ${project.path}${
-        project.group ? `\nGrupo: ${project.group}` : ""
-      }${project.notes ? `\n\nNotas:\n${project.notes}` : ""}`;
+      this.id = project.id;
+      const hasNotes = project.notes && project.notes.trim() !== "";
+      const hasTags = project.tags && project.tags.length > 0;
 
-      // Configura comando padrão ao clicar
+      if (hasNotes || hasTags) {
+        const md = new vscode.MarkdownString();
+        md.isTrusted = true;
+
+        if (hasNotes) {
+          md.appendMarkdown(`**Notas do Projeto (${project.name}):**\n\n${project.notes}`);
+        }
+
+        if (hasNotes && hasTags) {
+          md.appendMarkdown("\n\n---\n\n");
+        }
+
+        if (hasTags) {
+          const tagsStr = project.tags!.map((t) => `\`${t}\``).join(", ");
+          md.appendMarkdown(`🏷️ **Tags:** ${tagsStr}`);
+        }
+
+        this.tooltip = md;
+      } else {
+        this.tooltip = "";
+      }
+
+      // Configura comando padrão ao clicar (abre na mesma janela)
       this.command = {
         command: "projectOrganizer.openProject",
         title: "Open Project",
         arguments: [project],
       };
     } else if (type === "group" && fullGroupPath) {
-      this.tooltip = `Grupo: ${fullGroupPath}`;
+      this.id = `group_${fullGroupPath}`;
+      this.tooltip = "";
     }
   }
 }
@@ -121,6 +143,7 @@ export class ProjectTreeProvider
 
   getTreeItem(element: ProjectTreeItem): vscode.TreeItem {
     if (element.type === "project" && element.project) {
+      element.contextValue = "project";
       const project = element.project;
       const cachedGit = this.gitStatusCache.get(project.id);
 
@@ -143,6 +166,7 @@ export class ProjectTreeProvider
         element.description = undefined;
       }
     } else if (element.type === "group") {
+      element.contextValue = "group";
       element.iconPath = new vscode.ThemeIcon("folder");
     }
 
@@ -284,5 +308,41 @@ export class ProjectTreeProvider
     }
 
     return items;
+  }
+
+  getParent(element: ProjectTreeItem): ProjectTreeItem | undefined {
+    if (element.type === "project" && element.project) {
+      const project = element.project;
+      if (!project.group) {
+        return undefined;
+      }
+      const parts = project.group.split("/");
+      const parentName = parts[parts.length - 1];
+      return new ProjectTreeItem(
+        parentName,
+        vscode.TreeItemCollapsibleState.Expanded,
+        "group",
+        undefined,
+        project.group
+      );
+    }
+
+    if (element.type === "group" && element.fullGroupPath) {
+      const parts = element.fullGroupPath.split("/");
+      if (parts.length <= 1) {
+        return undefined;
+      }
+      const parentPath = parts.slice(0, -1).join("/");
+      const parentName = parts[parts.length - 2];
+      return new ProjectTreeItem(
+        parentName,
+        vscode.TreeItemCollapsibleState.Expanded,
+        "group",
+        undefined,
+        parentPath
+      );
+    }
+
+    return undefined;
   }
 }

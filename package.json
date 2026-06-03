@@ -10,6 +10,14 @@
   "categories": [
     "Other"
   ],
+  "tags": [
+    "folder",
+    "git",
+    "manage",
+    "project",
+    "workspace",
+    "switch"
+  ],
   "activationEvents": [],
   "main": "./dist/extension.js",
   "icon": "resources/icon.png",
@@ -72,7 +80,8 @@
       },
       {
         "command": "projectOrganizer.openProjectInNewWindow",
-        "title": "Project Organizer: Open Project in New Window"
+        "title": "Project Organizer: Open Project in New Window",
+        "icon": "$(link-external)"
       },
       {
         "command": "projectOrganizer.openTerminal",
@@ -86,6 +95,16 @@
         "command": "projectOrganizer.editProjectsJson",
         "title": "Project Organizer: Edit Projects (JSON)",
         "icon": "$(go-to-file)"
+      },
+      {
+        "command": "projectOrganizer.expandAll",
+        "title": "Project Organizer: Expand All Groups",
+        "icon": "$(list-tree)"
+      },
+      {
+        "command": "projectOrganizer.collapseAll",
+        "title": "Project Organizer: Collapse All Groups",
+        "icon": "$(collapse-all)"
       }
     ],
     "menus": {
@@ -109,37 +128,52 @@
           "command": "projectOrganizer.editProjectsJson",
           "when": "view == projectOrganizer.projectsView",
           "group": "navigation@4"
+        },
+        {
+          "command": "projectOrganizer.expandAll",
+          "when": "view == projectOrganizer.projectsView",
+          "group": "navigation@5"
+        },
+        {
+          "command": "projectOrganizer.collapseAll",
+          "when": "view == projectOrganizer.projectsView",
+          "group": "navigation@6"
         }
       ],
       "view/item/context": [
         {
-          "command": "projectOrganizer.openProject",
-          "when": "view == projectOrganizer.projectsView && viewItem == project",
+          "command": "projectOrganizer.openProjectInNewWindow",
+          "when": "viewItem == project",
           "group": "inline@1"
         },
         {
+          "command": "projectOrganizer.openProject",
+          "when": "viewItem == project",
+          "group": "1_open@1"
+        },
+        {
           "command": "projectOrganizer.openProjectInNewWindow",
-          "when": "view == projectOrganizer.projectsView && viewItem == project",
-          "group": "inline@2"
+          "when": "viewItem == project",
+          "group": "1_open@2"
         },
         {
           "command": "projectOrganizer.renameProject",
-          "when": "view == projectOrganizer.projectsView && viewItem == project",
+          "when": "viewItem == project",
           "group": "1_modification@1"
         },
         {
           "command": "projectOrganizer.removeProject",
-          "when": "view == projectOrganizer.projectsView && viewItem == project",
+          "when": "viewItem == project",
           "group": "1_modification@2"
         },
         {
           "command": "projectOrganizer.openTerminal",
-          "when": "view == projectOrganizer.projectsView && viewItem == project",
+          "when": "viewItem == project",
           "group": "2_actions@1"
         },
         {
           "command": "projectOrganizer.revealInFinder",
-          "when": "view == projectOrganizer.projectsView && viewItem == project",
+          "when": "viewItem == project",
           "group": "2_actions@2"
         }
       ]
