@@ -1,17 +1,14 @@
-name: Continuous Integration
+name: Release & Publish
 
 on:
   push:
-    branches:
-      - main
-  pull_request:
-    branches:
-      - main
+    tags:
+      - 'v*'
   workflow_dispatch:
 
 jobs:
-  test:
-    name: Build & Test
+  publish:
+    name: Publish to Open VSX
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
@@ -31,3 +28,6 @@ jobs:
 
       - name: Run Unit Tests
         run: npm run test
+
+      - name: Publish to Open VSX Registry
+        run: npm run publish -- -p ${{ secrets.OVSX_PAT }}
