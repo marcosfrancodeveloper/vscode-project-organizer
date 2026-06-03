@@ -3,7 +3,7 @@
   "displayName": "Project Organizer",
   "description": "%extension.description%",
   "version": "1.0.0",
-  "publisher": "marcosfranco",
+  "publisher": "marcosfrancodeveloper",
   "license": "GPL-3.0-or-later",
   "l10n": "./l10n",
   "repository": {
@@ -300,8 +300,8 @@
     "watch": "node esbuild.js --watch",
     "package": "npx @vscode/vsce package -o project-organizer.vsix",
     "publish": "npx @vscode/vsce publish",
-    "test": "jest",
-    "test:watch": "jest --watch"
+    "test": "jest --no-watchman --detectOpenHandles",
+    "test:watch": "jest --watch --no-watchman"
   },
   "devDependencies": {
     "@types/jest": "^29.5.11",

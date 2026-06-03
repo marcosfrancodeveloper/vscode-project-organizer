@@ -1,5 +1,11 @@
 import * as vscode from "vscode";
-import { Project, GitStatus, TreeItemType, TreeScope, ProjectGroup } from "./interfaces/models.interface";
+import {
+  Project,
+  GitStatus,
+  TreeItemType,
+  TreeScope,
+  ProjectGroup
+} from "./interfaces/models.interface";
 import { IStorageManager, IGitService } from "./interfaces/services.interface";
 
 /**
@@ -175,7 +181,8 @@ export class ProjectTreeProvider
   public getTreeItem(element: ProjectTreeItem): vscode.TreeItem {
     if (element.type === "root-favorites") {
       element.contextValue = "root";
-      element.iconPath = new vscode.ThemeIcon("star");
+      // INFO: element.iconPath = new vscode.ThemeIcon("star");
+      element.iconPath = undefined;
     } else if (element.type === "root-projects") {
       element.contextValue = "root";
       // Sem ícone no item de raiz de projetos
