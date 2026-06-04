@@ -1,6 +1,6 @@
-[![](https://vsmarketplacebadges.dev/version-short/marcosfrancodeveloper.project-organizer.svg)](https://marketplace.visualstudio.com/items?itemName=marcosfrancodeveloper.project-organizer)
-[![](https://vsmarketplacebadges.dev/downloads-short/marcosfrancodeveloper.project-organizer.svg)](https://marketplace.visualstudio.com/items?itemName=marcosfrancodeveloper.project-organizer)
-[![](https://vsmarketplacebadges.dev/rating-short/marcosfrancodeveloper.project-organizer.svg)](https://marketplace.visualstudio.com/items?itemName=marcosfrancodeveloper.project-organizer)
+[![](https://img.shields.io/open-vsx/v/marcosfrancodeveloper/project-organizer.svg)](https://open-vsx.org/extension/marcosfrancodeveloper/project-organizer)
+[![](https://img.shields.io/open-vsx/d/marcosfrancodeveloper/project-organizer.svg)](https://open-vsx.org/extension/marcosfrancodeveloper/project-organizer)
+[![](https://img.shields.io/open-vsx/r/marcosfrancodeveloper/project-organizer.svg)](https://open-vsx.org/extension/marcosfrancodeveloper/project-organizer)
 
 <p align="center">
   <br />
