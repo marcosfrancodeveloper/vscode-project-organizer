@@ -6,6 +6,23 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) 
 
 ---
 
+## [1.0.2] - 2026-06-03
+
+### Changed
+- **Modular CI/CD Pipelines**: Refactored the GitHub Actions setup into separate workflows: `ci.yml` for pull requests and main pushes, and `release.yml` for tag releases.
+- **Reverted Packager Script**: Restored `package` command in `package.json` to use `@vscode/vsce` instead of `ovsx` to fix CLI flag compatibility issues.
+
+## [1.0.1] - 2026-06-03
+
+### Added
+- **Jest Unit Tests Suite**: Implemented comprehensive unit tests for `GitService`, `ProjectScanner`, and `StorageService` using custom `vscode` mocks.
+- **Automated Open VSX Release Pipeline**: Configured GitHub Actions to automatically test, compile, and publish the extension upon version tag pushes.
+- **Watchman Sandbox Fixes**: Added `.watchmanconfig` and `--no-watchman` flags to bypass file crawling access issues on macOS.
+
+### Changed
+- **UI Star Icon Removal**: Disabled the default star icon for the favorites folder root to polish the sidebar tree UI.
+- **Publisher Namespace**: Updated extension publisher namespace to `marcosfrancodeveloper` in preparation for deployment.
+
 ## [1.0.0] - 2026-06-03
 
 ### Added
