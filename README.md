@@ -1,6 +1,6 @@
 [![](https://img.shields.io/open-vsx/v/marcosfrancodeveloper/project-organizer.svg)](https://open-vsx.org/extension/marcosfrancodeveloper/project-organizer)
-[![](https://img.shields.io/open-vsx/d/marcosfrancodeveloper/project-organizer.svg)](https://open-vsx.org/extension/marcosfrancodeveloper/project-organizer)
-[![](https://img.shields.io/open-vsx/r/marcosfrancodeveloper/project-organizer.svg)](https://open-vsx.org/extension/marcosfrancodeveloper/project-organizer)
+[![](https://img.shields.io/open-vsx/dt/marcosfrancodeveloper/project-organizer.svg)](https://open-vsx.org/extension/marcosfrancodeveloper/project-organizer)
+[![](https://img.shields.io/github/actions/workflow/status/marcosfrancodeveloper/vscode-project-organizer/main.yml?branch=main&label=CI)](https://github.com/marcosfrancodeveloper/vscode-project-organizer/actions/workflows/main.yml)
 
 <p align="center">
   <br />

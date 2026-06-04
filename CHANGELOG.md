@@ -9,7 +9,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) 
 ## [1.0.3] - 2026-06-03
 
 ### Changed
-- **Open VSX Badge Integration**: Replaced Microsoft Visual Studio Marketplace badges in `README.md` with Shields.io Open VSX badges to correctly render version, download counts, and ratings.
+- **Open VSX Badge Integration**: Replaced legacy Microsoft Visual Studio Marketplace badges in `README.md` with Shields.io Open VSX badges (fixing the 404 on download counts by using `dt`) and added a GitHub Actions CI status badge in place of the unsupported rating badge.
 
 ## [1.0.2] - 2026-06-03
 
