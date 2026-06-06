@@ -3,125 +3,154 @@
 [![Open VSX Downloads](https://img.shields.io/open-vsx/dt/marcosfrancodeveloper/project-organizer)](https://open-vsx.org/extension/marcosfrancodeveloper/project-organizer)
 [![CI Status](https://img.shields.io/github/actions/workflow/status/marcosfrancodeveloper/vscode-project-organizer/main.yml?branch=main&label=CI&logo=github-actions)](https://github.com/marcosfrancodeveloper/vscode-project-organizer/actions/workflows/main.yml)
 
-
 <p align="center">
   <br />
   <a title="Learn more about Project Organizer" href="https://github.com/marcosfrancodeveloper/vscode-project-organizer"><img src="https://raw.githubusercontent.com/marcosfrancodeveloper/vscode-project-organizer/main/resources/icon.png" alt="Project Organizer Logo" width="160" height="160" /></a>
 </p>
 
-# What's new in Project Organizer
-
-*   **Group Organization:** Natively structure your projects into collapsible groups (e.g., `Work` or `Personal`).
-*   **Asynchronous Git Monitoring:** Low-overhead background repository monitoring using direct `.git/HEAD` filesystem parsing and lazy-loaded rendering, preventing thread blocking or CPU load on large workspaces.
-*   **Advanced Search Palette (Quick Open):** Locate your projects instantly by filtering by name, path, group, or custom tags.
-*   **Markdown Tooltip Notes:** Hover over projects in the side bar to read annotations and configuration notes formatted in rich Markdown.
-*   **Flexible Sorting & Custom Ordering:** Sort projects by Name or Last Accessed in ascending/descending order, or manually define a custom numeric position for projects and groups in the sidebar.
-*   **Project Favorites & Deprecation:** Keep essential projects handy in a dedicated Favorites view, and deprecate/archive inactive ones to hide or show them based on preferences.
-*   **Multi-language Support:** Fully localized in English, Portuguese, Spanish, and French.
-*   **Portable and Custom Persistence:** Save projects in the default workspace state or sync with an external file via `projectOrganizer.customProjectsFile`.
-*   **One-Click Imports:** Migrate seamlessly from the legacy *Project Manager* extension in either merge or replace mode.
-*   **Global Tree controls:** Expand and collapse all project groups globally with persistence inside `settings.json`.
-
 # Project Organizer
 
-It helps you to easily access and structure your **projects**, no matter where they are located. _Don't lose track of your workspaces anymore_.
+**Project Organizer** is a high-performance, developer-focused VS Code extension designed to help you organize and switch between multiple local projects and workspaces effortlessly. No matter where your repositories are scattered on your disk, Project Organizer brings them together in a clean, customizable hierarchy.
 
-You can organize your repositories into **collapsible groups**, auto-detect **Git** repositories under custom paths, and keep track of active branches and dirty states at a glance.
+---
 
-Here are some of the features that **Project Organizer** provides:
+## Key Features
 
-*   Save folder or workspace as a **Project** with custom groups (e.g., `Personal` or `Learning`)
-*   Auto-detect local **Git** repositories
-*   Organize and filter projects using custom **Tags** and notes
-*   Review active **Git status** asynchronously with lazy-loaded rendering and low-overhead filesystem HEAD parsing
-*   Open projects in the same window or a new window
-*   Filter projects dynamically through a dedicated **Side Bar**
-*   Sort and manually order projects and groups in the sidebar
-*   Favorite and Archive (Deprecate) projects
+*   **Collapsible Custom Groups:** Group your projects into unlimited hierarchical directories (e.g., `Work/Client-A/Frontend` or `Personal/Sandbox`).
+*   **Lazy-Loaded Git Monitoring:** Asynchronously retrieves branch names and dirty states in the background without slowing down the initial VS Code UI rendering.
+*   **Advanced Quick Open Palette:** Instantly search through projects by combining names, file paths, tags, or markdown notes with fuzzy filtering.
+*   **Flat Favorites View:** Pin your most frequently accessed projects in a separate flat list for immediate access.
+*   **Import Utilities:** Migrate your existing project configuration files from legacy extensions like *Project Manager* with a single click (in merge or replace mode).
+*   **Flexible Storage Sync:** Keep your settings synchronized across machines by pointing the database to an external JSON file (e.g. Dropbox, Google Drive, or dotfiles repositories).
 
-# Features
+---
 
-## Available Commands
+## How It Works (Performance Architecture)
 
-*   `Project Organizer: Add Project` Save the current folder/workspace as a new project
-*   `Project Organizer: Add Project Folder` Choose any folder on disk to add as a project
-*   `Project Organizer: Search Projects` Open fuzzy search palette with tag and path filtering
-*   `Project Organizer: Scan Folders for Projects` Scan your local directories for Git repositories
-*   `Project Organizer: Edit Projects File` Edit your projects JSON file directly in the editor
-*   `Project Organizer: Expand All Groups` Expand all group folders recursively in the sidebar
-*   `Project Organizer: Collapse All Groups` Collapse all group folders recursively in the sidebar
-*   `Project Organizer: Import from Project Manager` Migrate projects from the legacy Project Manager extension
-*   `Project Organizer: Favorite` Add a project to your favorites list
-*   `Project Organizer: Unfavorite` Remove a project from your favorites list
-*   `Project Organizer: Deprecate Project` Archive/deprecate a project in the sidebar
-*   `Project Organizer: Undeprecate Project` Reactivate a deprecated project
-*   `Project Organizer: Change Sort Criteria...` Change the sorting criteria of the project list (Name or Last Accessed)
-*   `Project Organizer: Toggle Sort Order` Switch between ascending and descending order
-*   `Project Organizer: Set Position...` Set a manual numeric display index for a project or group
+Project Organizer was built from the ground up to respect developer workspaces. It incorporates optimized algorithms to prevent IDE slowdowns, even when managing hundreds of repositories:
 
-## Manage your projects
+<p align="center">
+  <img src="resources/how-it-works.png" alt="How It Works" width="640" />
+</p>
 
-### Add Project
+### 1. Direct HEAD File Parsing (Zero Spawn Overhead)
+Traditional Git monitoring extensions run child processes (`git status`, `git branch`) for every single repository. On Windows, spawning processes is extremely heavy and easily causes CPU bottlenecks. 
+*   **Our Solution:** Project Organizer reads and parses the `.git/HEAD` file directly using Node.js filesystem APIs. It only spawns a Git process when verifying dirty state modifications or unpushed commits count. This makes active branch detection nearly instantaneous and consumes virtually zero CPU.
+*   **Worktree & Submodule Support:** If a project uses Git worktrees or submodules where `.git` is a file instead of a folder, the extension parses the `gitdir:` path pointer to resolve the real HEAD file.
 
-You can save the current folder/workspace as a **Project** at any time. You can assign it to a group directory by specifying a folder/group name.
+### 2. Asynchronous Lazy Loading
+When VS Code loads the sidebar, Project Organizer renders your directories instantly with default icons and no descriptions. The background poller then processes project statuses **sequentially** (rather than concurrently via `Promise.all` which causes I/O spikes) and caches the results. The tree redraws lazily only when new Git states are resolved.
 
-> It suggests a name to you _automatically_ based on the folder's name.
- 
-### Edit Projects
+### 3. $O(N)$ Hierarchy Caching
+To resolve parent folders and logical paths (e.g. for Vim keybindings, reveal actions, or sidebar selections), the tree provider constructs a single in-memory graph map on-demand during updates. This eliminates nested depth-first searches, reducing lookup operations from $O(N^2 \cdot \text{I/O})$ down to $O(N)$ with exactly one database read.
 
-For easier customization of your project list, you can edit the database JSON file directly inside **VS Code**. Just execute `Project Organizer: Edit Projects File`. The extension saves projects using a single-level nested structure representing your groups:
+---
+
+## Database Schema & Persistence Model
+
+You can edit your projects database JSON file directly in VS Code by running `Project Organizer: Edit Projects File`. The extension saves your hierarchy in a single-level nested structure. 
+
+An example of the data schema:
 
 ```json
 {
-  "Corp": {
-    "Front App": {
-      "id": "L1VzZXJzL21hcmNvc2ZyYW5jby9Eb2N1bWVudHMvcHJvamVjdHMvZXhlbXBsby1iYWNrZW5k",
-      "path": "/paths/corp/front-angular",
-      "notes": "TODO: Run database migrations on start",
-      "tags": ["frontend", "angular"],
-      "lastAccessed": 1780433838030,
-      "favorite": true
-    }
+  "Corporate": {
+    "Web Portal": {
+      "id": "L1VzZXJzL21hcmNvc2ZyYW5jby9Eb2N1bWVudHMvcHJvamVjdHMvd2ViLXBvcnRhbA",
+      "path": "/paths/corporate/web-portal",
+      "notes": "### Backend Connection\nUse port `8080` for local development.",
+      "tags": ["frontend", "react", "typescript"],
+      "lastAccessed": 1780433838000,
+      "favorite": true,
+      "position": 1
+    },
+    "$position": 1
   },
-  "Personal": {
-    "Nest API": {
-      "id": "L1VzZXJzL21hcmNvc2ZyYW5jby9Eb2N1bWVudHMvcHJvamVjdHMvZXhlbXBsby1wb3J0YWw",
-      "path": "/paths/personal/nest-api",
-      "tags": ["backend", "nest"],
-      "lastAccessed": 1780427953530
+  "Sandbox": {
+    "Test Repo": {
+      "id": "L1VzZXJzL21hcmNvc2ZyYW5jby9Eb2N1bWVudHMvcHJvamVjdHMvdGVzdC1yZXBv",
+      "path": "/paths/sandbox/test-repo",
+      "lastAccessed": 1780427953000,
+      "deprecated": true
     }
-  },
-  "Another": {
-    "id": "L1VzZXJzL21hcmNvc2ZyYW5jby9Eb2N1bWVudHMvcHJvamVjdHMvYW5vdGhlci0x",
-    "path": "/paths/personal/nest-api",
-    "tags": ["backend", "nest"],
-    "lastAccessed": 1780427953530,
-    "notes": "This project is deprecated for any reason. I will archive it in the next update.",
-    "position": 1,
-    "deprecated": true
   }
 }
 ```
+*   `$position`: Stores the custom sorting order of a group.
+*   `deprecated`: Projects marked as archived/deprecated can be toggled visible or invisible via settings.
 
-> You can use `~` or `$home` while defining any path. It will be replaced by your HOME folder.
+---
 
-## Access 
+## Available Commands
 
-### Search Projects
+| Command | Description | Shortcut (Menus) |
+| :--- | :--- | :--- |
+| `Project Organizer: Add Project` | Save the currently open editor folder as a project. | Context Menu / Palette |
+| `Project Organizer: Add Project Folder` | Pick any folder on disk to add to the hierarchy. | Sidebar Header |
+| `Project Organizer: Search Projects` | Open the Quick Open search palette. | Header / `Ctrl+Alt+P` |
+| `Project Organizer: Scan Folders...` | Scan local paths for Git repositories recursively. | Secondary Title Menu |
+| `Project Organizer: Edit Projects File` | Edit the physical JSON database directly. | Sidebar / Context Menu |
+| `Project Organizer: Expand All Groups` | Recursively expand all groups in the tree view. | Sidebar Title Bar |
+| `Project Organizer: Collapse All Groups` | Recursively collapse all groups in the tree view. | Sidebar Title Bar |
+| `Project Organizer: Favorite` / `Unfavorite` | Pin or unpin a project to/from the Favorites list. | Inline Button / Menu |
+| `Project Organizer: Set Position...` | Set custom display index for drag-and-drop order. | Context Menu |
 
-Shows your projects and select one to open. Projects are sorted by last accessed (LRU).
+---
 
-### Open Project in New Window
+## Configuration Settings
 
-Just like opening projects normally, but always opening in a **New Window**.
+Configure these options in VS Code Settings (`Ctrl+,` or `Cmd+,` on macOS):
 
-## Keyboard Focused Users
+### `projectOrganizer.scanPaths`
+An array of directories to scan for Git repositories. Supports the home directory shorthand `~/`.
+```json
+"projectOrganizer.scanPaths": ["~/projects/work", "~/projects/sandbox"]
+```
 
-If you are a keyboard focused user and use _Vim-like_ keyboard navigation, you can navigate through the project list with your own keybindings. 
+### `projectOrganizer.scanDepth`
+How deep the automatic scanner crawls directory paths to search for repositories (default is `3`).
+```json
+"projectOrganizer.scanDepth": 3
+```
 
-Just use the `when` clause `"inProjectOrganizerList"`, like:
+### `projectOrganizer.ignoredFolders`
+Excludes specific directories from crawling to save disk overhead and boost scanning performance.
+```json
+"projectOrganizer.ignoredFolders": ["node_modules", "dist", "bin", ".git", "vendor"]
+```
+
+### `projectOrganizer.gitStatusEnabled`
+Enables background Git checks (branch detection, modified files, unpushed commits) (default is `true`).
+```json
+"projectOrganizer.gitStatusEnabled": true
+```
+
+### `projectOrganizer.gitStatusInterval`
+Configures the delay in milliseconds between background updates. Since the poller runs sequentially and recursively, this delay starts only **after** the current cycle completes, eliminating process accumulation (default is `15000` ms).
+```json
+"projectOrganizer.gitStatusInterval": 15000
+```
+
+### `projectOrganizer.customProjectsFile`
+Path to a custom JSON file to store your project tree. Useful to sync your projects across machines.
+```json
+"projectOrganizer.customProjectsFile": "~/Sync/vscode-projects.json"
+```
+
+### `projectOrganizer.sortBy`
+Selects the sorting criteria for projects inside groups: `"name"` (alphabetical) or `"lastAccessed"` (LRU).
+```json
+"projectOrganizer.sortBy": "name"
+```
+
+---
+
+## Keyboard Focused Users (Vim Style)
+
+If you use keyboard-driven shortcuts, you can bind keys to navigate the Quick Open list using the `inProjectOrganizerList` context clause:
 
 ```json
+[
   {
     "key": "cmd+j",
     "command": "workbench.action.quickOpenSelectNext",
@@ -136,86 +165,12 @@ Just use the `when` clause `"inProjectOrganizerList"`, like:
     "key": "ctrl+j",
     "command": "workbench.action.quickOpenSelectNext",
     "when": "inProjectOrganizerList && (isWindows || isLinux)"
-  },
-  {
-    "key": "ctrl+shift+j",
-    "command": "workbench.action.quickOpenSelectPrevious",
-    "when": "inProjectOrganizerList && (isWindows || isLinux)"
   }
+]
 ```
 
-## Available Settings
+---
 
-You can configure the extension settings by opening VS Code Settings and searching for `Project Organizer`:
-
-*   `projectOrganizer.scanPaths`
-    Indicates directories to search for projects. Supports home directory path shorthand `~/`.
-    ```json
-    "projectOrganizer.scanPaths": [
-        "~/projects/work",
-        "~/projects/learning"
-    ]
-    ```
-
-*   `projectOrganizer.scanDepth`
-    Defines how deep the scanner should search recursively for repositories (default is `3`).
-    ```json
-    "projectOrganizer.scanDepth": 4
-    ```
-
-*   `projectOrganizer.ignoredFolders`
-    List of folders to ignore when scanning base directories to boost performance.
-    ```json
-    "projectOrganizer.ignoredFolders": [
-        "node_modules",
-        "dist",
-        "bin",
-        ".git"
-    ]
-    ```
-
-*   `projectOrganizer.gitStatusEnabled`
-    Enables background checks and displays Git indicators in the tree view (default is `true`).
-    ```json
-    "projectOrganizer.gitStatusEnabled": true
-    ```
-
-*   `projectOrganizer.gitStatusInterval`
-    Configures the check interval in milliseconds (default is `15000` ms).
-    ```json
-    "projectOrganizer.gitStatusInterval": 20000
-    ```
-
-*   `projectOrganizer.customProjectsFile`
-    Alternative location path for the projects database file, useful for syncing settings between machines.
-    ```json
-    "projectOrganizer.customProjectsFile": "~/GoogleDrive/vscode-projects.json"
-    ```
-
-*   `projectOrganizer.treeExpanded`
-    Controls whether the project group folders are expanded by default when VS Code loads.
-    ```json
-    "projectOrganizer.treeExpanded": false
-    ```
-
-*   `projectOrganizer.showDeprecated`
-    Controls whether projects marked as deprecated/archived are visible in the sidebar tree.
-    ```json
-    "projectOrganizer.showDeprecated": true
-    ```
-
-*   `projectOrganizer.sortBy`
-    Sets the sorting criteria for projects in the sidebar: `"name"` or `"lastAccessed"`.
-    ```json
-    "projectOrganizer.sortBy": "name"
-    ```
-
-*   `projectOrganizer.sortOrder`
-    Sets the sorting direction: `"asc"` (ascending) or `"desc"` (descending).
-    ```json
-    "projectOrganizer.sortOrder": "asc"
-    ```
-
-# License
+## License
 
 This project is licensed under the [GNU General Public License v3](LICENSE.md).
