@@ -12,6 +12,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) 
 ### Fixed
 - **Group Dislocation on Updates**: Fixed a critical bug in `StorageService.updateProject` where updating properties like position, accessing a project, favoriting, or deprecating without an explicit `group` payload incorrectly dislocated the project to the root registry.
 
+### Changed
+- **Documentation Badges Refresh**: Replaced retired dynamic Visual Studio Marketplace badges in `README.md` with a stable static badge and standardized Open VSX / CI badges.
+
 ## [1.1.0] - 2026-06-06
 
 ### Added
