@@ -4,6 +4,21 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0] - 2026-06-06
+
+### Added
+- **Asynchronous Lazy Loading of Git Status**: Removed all synchronous git check operations (like `isGitRepository`) from the tree view rendering paths (`getTreeItem`), boosting sidebar display speeds. Icons (`repo`/`root-folder`) and branches are loaded dynamically in the background.
+- **Git Worktrees & Submodules Support**: Added path parsing support for `gitdir:` pointers inside `.git` files, allowing branch detection in nested worktrees and submodules.
+
+### Fixed
+- **Windows CPU Overload & Reload Loops**: Fixed severe performance bottlenecks and CPU crashes on Windows by replacing `setInterval` loops with recursive, non-overlapping `setTimeout` timers.
+- **Git Executable Absence Overhead**: Globally caches the absence of the Git command line utility, bypassing repeated failing child process executions.
+
+### Changed
+- **Direct HEAD Parsing**: Replaced heavy `git symbolic-ref`/`git rev-parse` process spawns with direct filesystem reads of `.git/HEAD` for branch name detection, eliminating spawn overhead.
+- **O(1) Parent Node Lookups**: Optimized the sidebar parent search algorithms from $O(N^2 \cdot \text{I/O})$ down to $O(N)$ with exactly one I/O operation per request, using an in-memory parent hierarchy map.
+- **Sorting Performance**: Partitioned directory and project nodes in a single pass ($O(N)$) and cached sorting order multipliers globally.
+
 ## [1.1.1] - 2026-06-06
 
 ### Added

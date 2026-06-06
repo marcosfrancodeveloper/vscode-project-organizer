@@ -8,9 +8,11 @@ import {
   ProjectRegistryNode
 } from "./interfaces/models.interface";
 import { IStorageManager, IGitService } from "./interfaces/services.interface";
+import { strikethrough } from "./utils/strikethrough.util";
 
 /**
  * Item visual representando um nó na árvore lateral
+ * @extends vscode.TreeItem
  */
 export class ProjectTreeItem extends vscode.TreeItem {
   /**
@@ -95,9 +97,10 @@ export class ProjectTreeProvider
     ProjectTreeItem | undefined | null | void
   > = this._onDidChangeTreeData.event;
 
-  private gitStatusCache: Map<string, GitStatus> = new Map();
+  private gitStatusCache: Map<string, { isGit: boolean; status: GitStatus | null }> = new Map();
   private gitInitialTimeout: NodeJS.Timeout | undefined;
   private gitUpdateTimer: NodeJS.Timeout | undefined;
+  private gitPollInProgress = false;
 
   constructor(
     private storageManager: IStorageManager,
@@ -109,9 +112,15 @@ export class ProjectTreeProvider
 
   /**
    * Força uma atualização visual completa em todos os nós da árvore lateral
+   * e agenda uma verificação imediata de status do Git
    */
   public refresh(): void {
     this._onDidChangeTreeData.fire();
+    // Agenda verificação imediata de status do Git (debounce de 100ms) para refletir as alterações rápidas do projects.json
+    if (this.gitInitialTimeout) {
+      clearTimeout(this.gitInitialTimeout);
+    }
+    this.gitInitialTimeout = setTimeout(() => this.runGitPoll(), 100);
   }
 
   /**
@@ -122,15 +131,28 @@ export class ProjectTreeProvider
       clearTimeout(this.gitInitialTimeout);
     }
     if (this.gitUpdateTimer) {
-      clearInterval(this.gitUpdateTimer);
+      clearTimeout(this.gitUpdateTimer);
     }
   }
 
   /**
-   * Inicia o atualizador assíncrono em segundo plano para o status Git dos projetos
+   * Inicializa o agendamento do atualizador em segundo plano
+   * (não-bloqueante) para o status Git dos projetos
    */
   private startGitStatusPoller(): void {
-    const updateStatus = async () => {
+    this.gitInitialTimeout = setTimeout(() => this.runGitPoll(), 1000);
+  }
+
+  /**
+   * Executa a rotina de varredura de status do Git para todos os projetos cadastrados
+   */
+  private async runGitPoll(): Promise<void> {
+    if (this.gitPollInProgress) {
+      return;
+    }
+    this.gitPollInProgress = true;
+
+    try {
       const config = vscode.workspace.getConfiguration("projectOrganizer");
       const enabled = config.get<boolean>("gitStatusEnabled", true);
       if (!enabled) {
@@ -140,41 +162,64 @@ export class ProjectTreeProvider
       const projects = await this.storageManager.getProjects();
       let changed = false;
 
-      // Executa de forma concorrente para todos os projetos visíveis
-      await Promise.all(
-        projects.map(async (project) => {
-          if (this.gitService.isGitRepository(project.path)) {
+      // Processa os projetos sequencialmente para manter pegada de CPU/Processo mínima
+      for (const project of projects) {
+        try {
+          const isGit = this.gitService.isGitRepository(project.path);
+          const cached = this.gitStatusCache.get(project.id);
+
+          if (isGit) {
             const currentStatus = await this.gitService.getStatus(project.path);
-            const cachedStatus = this.gitStatusCache.get(project.id);
 
             if (
-              !cachedStatus ||
-              cachedStatus.branch !== currentStatus?.branch ||
-              cachedStatus.isDirty !== currentStatus?.isDirty ||
-              cachedStatus.unpushed !== currentStatus?.unpushed
+              !cached ||
+              !cached.isGit ||
+              !cached.status ||
+              !currentStatus ||
+              cached.status.branch !== currentStatus.branch ||
+              cached.status.isDirty !== currentStatus.isDirty ||
+              cached.status.unpushed !== currentStatus.unpushed
             ) {
-              if (currentStatus) {
-                this.gitStatusCache.set(project.id, currentStatus);
-                changed = true;
-              }
+              this.gitStatusCache.set(project.id, { isGit: true, status: currentStatus });
+              changed = true;
+            }
+          } else {
+            // Se não for repositório Git, mas estava cacheado como Git ou não estava no cache
+            if (!cached || cached.isGit) {
+              this.gitStatusCache.set(project.id, { isGit: false, status: null });
+              changed = true;
             }
           }
-        })
-      );
-
-      // Atualiza a interface gráfica somente se houver mudanças reais detectadas
-      if (changed) {
-        this.refresh();
+        } catch {
+          // Ignora erros individuais de projeto
+        }
       }
-    };
 
-    // Agenda execuções inicial e periódicas
-    this.gitInitialTimeout = setTimeout(updateStatus, 1000);
+      // Limpa chaves do cache para projetos que foram removidos da base
+      const projectIds = new Set(projects.map((p) => p.id));
+      for (const cachedId of this.gitStatusCache.keys()) {
+        if (!projectIds.has(cachedId)) {
+          this.gitStatusCache.delete(cachedId);
+          changed = true;
+        }
+      }
 
-    const config = vscode.workspace.getConfiguration("projectOrganizer");
-    const interval = config.get<number>("gitStatusInterval", 15000);
+      if (changed) {
+        this._onDidChangeTreeData.fire();
+      }
+    } catch {
+      // Ignora erros globais da execução da rotina
+    } finally {
+      this.gitPollInProgress = false;
 
-    this.gitUpdateTimer = setInterval(updateStatus, interval);
+      if (this.gitUpdateTimer) {
+        clearTimeout(this.gitUpdateTimer);
+      }
+      // Agenda o próximo ciclo periódico
+      const config = vscode.workspace.getConfiguration("projectOrganizer");
+      const interval = config.get<number>("gitStatusInterval", 15000);
+      this.gitUpdateTimer = setTimeout(() => this.runGitPoll(), interval);
+    }
   }
 
   /**
@@ -204,8 +249,8 @@ export class ProjectTreeProvider
       element.contextValue = contextVal;
 
       const cachedGit = this.gitStatusCache.get(project.id);
+      const isGit = cachedGit ? cachedGit.isGit : false;
 
-      const isGit = this.gitService.isGitRepository(project.path);
       element.iconPath = project.deprecated
         ? new vscode.ThemeIcon("archive")
         : isGit
@@ -213,14 +258,15 @@ export class ProjectTreeProvider
           : new vscode.ThemeIcon("root-folder");
 
       let gitDesc = "";
-      if (isGit && cachedGit) {
-        gitDesc = `(${cachedGit.branch})`;
+      if (isGit && cachedGit && cachedGit.status) {
+        const status = cachedGit.status;
+        gitDesc = `(${status.branch})`;
         let statusIndicators = "";
-        if (cachedGit.isDirty) {
+        if (status.isDirty) {
           statusIndicators += "*";
         }
-        if (cachedGit.unpushed && cachedGit.unpushed > 0) {
-          statusIndicators += `↑${cachedGit.unpushed}`;
+        if (status.unpushed && status.unpushed > 0) {
+          statusIndicators += `↑${status.unpushed}`;
         }
         if (statusIndicators) {
           gitDesc += ` ${statusIndicators}`;
@@ -471,9 +517,17 @@ export class ProjectTreeProvider
     const config = vscode.workspace.getConfiguration("projectOrganizer");
     const sortBy = config.get<string>("sortBy", "name");
     const sortOrder = config.get<string>("sortOrder", "asc");
+    const sortMultiplier = sortOrder === "desc" ? -1 : 1;
 
-    const folders = nodes.filter((n) => "isFolder" in n && n.isFolder) as ProjectGroup[];
-    const projects = nodes.filter((n) => !("isFolder" in n && n.isFolder)) as Project[];
+    const folders: ProjectGroup[] = [];
+    const projects: Project[] = [];
+    for (const node of nodes) {
+      if ("isFolder" in node && node.isFolder) {
+        folders.push(node);
+      } else {
+        projects.push(node as Project);
+      }
+    }
 
     // 1. Ordena os subgrupos
     folders.sort((a, b) => {
@@ -490,12 +544,11 @@ export class ProjectTreeProvider
         return 1;
       }
 
-      const diff = a.name.localeCompare(b.name, undefined, { sensitivity: "base" });
-      return sortOrder === "desc" ? -diff : diff;
+      return a.name.localeCompare(b.name, undefined, { sensitivity: "base" }) * sortMultiplier;
     });
 
     // 2. Ordena os projetos irmãos seguindo as regras de pinning e preferências
-    const sortedProjects = [...projects].sort((a, b) => {
+    projects.sort((a, b) => {
       const posA = a.position;
       const posB = b.position;
 
@@ -510,14 +563,12 @@ export class ProjectTreeProvider
       }
 
       if (sortBy === "lastAccessed") {
-        const diff = a.lastAccessed - b.lastAccessed;
-        return sortOrder === "desc" ? -diff : diff;
+        return (a.lastAccessed - b.lastAccessed) * sortMultiplier;
       }
-      const diff = a.name.localeCompare(b.name, undefined, { sensitivity: "base" });
-      return sortOrder === "desc" ? -diff : diff;
+      return a.name.localeCompare(b.name, undefined, { sensitivity: "base" }) * sortMultiplier;
     });
 
-    return [...folders, ...sortedProjects];
+    return [...folders, ...projects];
   }
 
   /**
@@ -527,6 +578,7 @@ export class ProjectTreeProvider
     const config = vscode.workspace.getConfiguration("projectOrganizer");
     const sortBy = config.get<string>("sortBy", "name");
     const sortOrder = config.get<string>("sortOrder", "asc");
+    const sortMultiplier = sortOrder === "desc" ? -1 : 1;
 
     return [...projects].sort((a, b) => {
       const posA = a.position;
@@ -543,68 +595,40 @@ export class ProjectTreeProvider
       }
 
       if (sortBy === "lastAccessed") {
-        const diff = a.lastAccessed - b.lastAccessed;
-        return sortOrder === "desc" ? -diff : diff;
+        return (a.lastAccessed - b.lastAccessed) * sortMultiplier;
       }
-      const diff = a.name.localeCompare(b.name, undefined, { sensitivity: "base" });
-      return sortOrder === "desc" ? -diff : diff;
+      return a.name.localeCompare(b.name, undefined, { sensitivity: "base" }) * sortMultiplier;
     });
   }
 
   /**
-   * Helper assíncrono para encontrar o nó pai de um projeto ou subgrupo
+   * Constrói em uma única varredura linear O(N) um mapa de hierarquia e caminhos lógicos de todos os nós.
+   * Evita consultas redundantes ao banco e leituras do disco no getParent.
    */
-  private async findParentOfNode(
-    idOrName: string,
-    isSearchingFolder: boolean = false
-  ): Promise<ProjectGroup | undefined> {
-    const tree = await this.storageManager.getProjectsTree();
-    let parentGroup: ProjectGroup | undefined;
+  private buildHierarchyMap(
+    nodes: ProjectRegistryNode[]
+  ): Map<string, { parent: ProjectGroup | undefined; path: string }> {
+    const map = new Map<string, { parent: ProjectGroup | undefined; path: string }>();
 
-    const search = (nodes: ProjectRegistryNode[], parent?: ProjectGroup): boolean => {
-      for (const node of nodes) {
-        if (isSearchingFolder) {
-          if ("isFolder" in node && node.isFolder) {
-            if (node.name === idOrName) {
-              parentGroup = parent;
-              return true;
-            }
-            if (search(node.children, node)) {
-              return true;
-            }
-          }
+    const traverse = (
+      nodesList: ProjectRegistryNode[],
+      currentParent?: ProjectGroup,
+      currentPath: string = ""
+    ) => {
+      for (const node of nodesList) {
+        if ("isFolder" in node && node.isFolder) {
+          const groupPath = currentPath ? `${currentPath}/${node.name}` : node.name;
+          map.set(node.name, { parent: currentParent, path: groupPath });
+          traverse(node.children, node, groupPath);
         } else {
-          if (!("isFolder" in node && node.isFolder)) {
-            const project = node as Project;
-            if (project.id === idOrName) {
-              parentGroup = parent;
-              return true;
-            }
-          } else {
-            if (search(node.children, node)) {
-              return true;
-            }
-          }
+          const project = node as Project;
+          map.set(project.id, { parent: currentParent, path: currentPath });
         }
       }
-      return false;
     };
 
-    search(tree);
-    return parentGroup;
-  }
-
-  /**
-   * Helper assíncrono para construir o caminho absoluto lógico de um grupo
-   */
-  private async getGroupNodePath(groupNode: ProjectGroup): Promise<string> {
-    const parts: string[] = [groupNode.name];
-    let parent = await this.findParentOfNode(groupNode.name, true);
-    while (parent) {
-      parts.unshift(parent.name);
-      parent = await this.findParentOfNode(parent.name, true);
-    }
-    return parts.join("/");
+    traverse(nodes);
+    return map;
   }
 
   /**
@@ -612,53 +636,52 @@ export class ProjectTreeProvider
    */
   public async getParent(element: ProjectTreeItem): Promise<ProjectTreeItem | undefined> {
     const scope = element.scope || "all";
+    if (element.type === "root-projects" || element.type === "root-favorites") {
+      return undefined;
+    }
+
+    const tree = await this.storageManager.getProjectsTree();
+    const hierarchy = this.buildHierarchyMap(tree);
+
     if (element.type === "project" && element.project) {
       if (scope === "favorites") {
         return undefined;
       }
 
-      const parentNode = await this.findParentOfNode(element.project.id, false);
-      if (!parentNode) {
+      const meta = hierarchy.get(element.project.id);
+      if (!meta || !meta.parent) {
         return undefined;
       }
 
-      const parentPath = await this.getGroupNodePath(parentNode);
       return new ProjectTreeItem(
-        parentNode.name,
+        meta.parent.name,
         vscode.TreeItemCollapsibleState.Expanded,
         "group",
         undefined,
-        parentNode,
-        parentPath,
+        meta.parent,
+        meta.path,
         scope
       );
     }
 
     if (element.type === "group" && element.groupNode) {
-      const parentNode = await this.findParentOfNode(element.groupNode.name, true);
-      if (!parentNode) {
+      const meta = hierarchy.get(element.groupNode.name);
+      if (!meta || !meta.parent) {
         return undefined;
       }
 
-      const parentPath = await this.getGroupNodePath(parentNode);
+      const parentMeta = hierarchy.get(meta.parent.name);
       return new ProjectTreeItem(
-        parentNode.name,
+        meta.parent.name,
         vscode.TreeItemCollapsibleState.Expanded,
         "group",
         undefined,
-        parentNode,
-        parentPath,
+        meta.parent,
+        parentMeta ? parentMeta.path : meta.parent.name,
         scope
       );
     }
 
     return undefined;
   }
-}
-
-/**
- * Função auxiliar para aplicar riscado (strikethrough) em texto utilizando caracteres Unicode
- */
-function strikethrough(text: string): string {
-  return text.split("").map((c) => c + "\u0336").join("");
 }

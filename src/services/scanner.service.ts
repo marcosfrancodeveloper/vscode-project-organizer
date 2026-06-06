@@ -4,7 +4,7 @@ import { IProjectScanner } from "../interfaces/services.interface";
 
 /**
  * Serviço que escaneia diretórios físicos à procura de marcações de projeto (ex: .git, package.json)
- * @implements Implementa a interface `IProjectScanner`
+ * @implements IProjectScanner
  */
 export class ProjectScanner implements IProjectScanner {
   /**

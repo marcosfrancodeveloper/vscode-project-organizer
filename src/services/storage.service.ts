@@ -6,16 +6,16 @@ import { IStorageManager } from "../interfaces/services.interface";
 
 /**
  * Gerenciador de persistência dos projetos e importação de extensões legadas
- * @implements Implementa a interface `IStorageManager`
+ * @implements IStorageManager
  */
 export class StorageService implements IStorageManager {
-  private static readonly STORAGE_KEY = "projectOrganizer.projects";
+  private static readonly _STORAGE_KEY = "projectOrganizer.projects";
 
   /**
    * Inicializa o serviço de persistência
    * @param context Contexto global da extensão do VS Code
    */
-  constructor(private context: vscode.ExtensionContext) { }
+  constructor(private _context: vscode.ExtensionContext) { }
 
   /**
    * Obtém o caminho do arquivo de persistência customizado se
@@ -44,7 +44,7 @@ export class StorageService implements IStorageManager {
     if (customPath) {
       return customPath;
     }
-    const dir = this.context.globalStorageUri.fsPath;
+    const dir = this._context.globalStorageUri.fsPath;
     return path.join(dir, "projects.json");
   }
 
@@ -176,7 +176,7 @@ export class StorageService implements IStorageManager {
    * @returns Número de projetos importados
    */
   public async importFromProjectManager(merge: boolean): Promise<number> {
-    const globalStorageRoot = path.dirname(this.context.globalStorageUri.fsPath);
+    const globalStorageRoot = path.dirname(this._context.globalStorageUri.fsPath);
     const pmProjectsPath = path.join(
       globalStorageRoot,
       "alefragnani.project-manager",
@@ -334,13 +334,13 @@ export class StorageService implements IStorageManager {
       // Migração de dados legados do globalState
       const customPath = this.getCustomFilePath();
       if (!customPath) {
-        const oldProjects = this.context.globalState.get<any[]>(
-          StorageService.STORAGE_KEY
+        const oldProjects = this._context.globalState.get<any[]>(
+          StorageService._STORAGE_KEY
         );
         if (oldProjects && Array.isArray(oldProjects) && oldProjects.length > 0) {
           const normalized = this.normalizeProjects(oldProjects);
           await this.saveProjects(normalized);
-          await this.context.globalState.update(StorageService.STORAGE_KEY, undefined);
+          await this._context.globalState.update(StorageService._STORAGE_KEY, undefined);
           return normalized;
         }
       }

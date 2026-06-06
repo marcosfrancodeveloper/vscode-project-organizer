@@ -5,6 +5,7 @@ import { IStorageManager } from "./interfaces/services.interface";
 /**
  * Controlador para gerenciar eventos de Arrastar e Soltar (Drag and Drop) na árvore de projetos.
  * Permite movimentação de projetos entre grupos, remoção de grupos ao soltar na raiz, e reordenação.
+ * @implements vscode.TreeDragAndDropController<ProjectTreeItem>
  */
 export class ProjectTreeDragAndDropController
   implements vscode.TreeDragAndDropController<ProjectTreeItem> {

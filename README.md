@@ -12,7 +12,7 @@
 # What's new in Project Organizer
 
 *   **Group Organization:** Natively structure your projects into collapsible groups (e.g., `Work` or `Personal`).
-*   **Asynchronous Git Monitoring:** Background repository checking to automatically display the active branch, modified state (`• *`), and local commits pending upload (`↑N`).
+*   **Asynchronous Git Monitoring:** Low-overhead background repository monitoring using direct `.git/HEAD` filesystem parsing and lazy-loaded rendering, preventing thread blocking or CPU load on large workspaces.
 *   **Advanced Search Palette (Quick Open):** Locate your projects instantly by filtering by name, path, group, or custom tags.
 *   **Markdown Tooltip Notes:** Hover over projects in the side bar to read annotations and configuration notes formatted in rich Markdown.
 *   **Flexible Sorting & Custom Ordering:** Sort projects by Name or Last Accessed in ascending/descending order, or manually define a custom numeric position for projects and groups in the sidebar.
@@ -33,7 +33,7 @@ Here are some of the features that **Project Organizer** provides:
 *   Save folder or workspace as a **Project** with custom groups (e.g., `Personal` or `Learning`)
 *   Auto-detect local **Git** repositories
 *   Organize and filter projects using custom **Tags** and notes
-*   Review active **Git status** asynchronously on the sidebar without opening the projects
+*   Review active **Git status** asynchronously with lazy-loaded rendering and low-overhead filesystem HEAD parsing
 *   Open projects in the same window or a new window
 *   Filter projects dynamically through a dedicated **Side Bar**
 *   Sort and manually order projects and groups in the sidebar

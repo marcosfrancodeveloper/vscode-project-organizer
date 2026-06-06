@@ -9,10 +9,18 @@ describe("GitService", () => {
   let gitService: GitService;
   const mockedExec = exec as unknown as jest.Mock;
   const mockedExistsSync = fs.existsSync as jest.Mock;
+  const mockedReadFileSync = fs.readFileSync as jest.Mock;
+  const mockedStatSync = fs.statSync as jest.Mock;
 
   beforeEach(() => {
     gitService = new GitService();
     jest.clearAllMocks();
+
+    // Comportamento padrão: .git é um diretório
+    mockedStatSync.mockReturnValue({
+      isDirectory: () => true,
+      isFile: () => false,
+    });
   });
 
   describe("isGitRepository", () => {
@@ -42,11 +50,10 @@ describe("GitService", () => {
 
     it("should return status information for a clean repo with no unpushed commits", async () => {
       mockedExistsSync.mockReturnValue(true);
+      mockedReadFileSync.mockReturnValue("ref: refs/heads/main\n");
       
       mockedExec.mockImplementation((cmd, _options, callback) => {
-        if (cmd.includes("symbolic-ref")) {
-          callback(null, "main\n", "");
-        } else if (cmd.includes("status --porcelain")) {
+        if (cmd.includes("status --porcelain")) {
           callback(null, "", "");
         } else if (cmd.includes("rev-list")) {
           callback(null, "0\n", "");
@@ -64,11 +71,10 @@ describe("GitService", () => {
 
     it("should return dirty and unpushed status correctly", async () => {
       mockedExistsSync.mockReturnValue(true);
+      mockedReadFileSync.mockReturnValue("ref: refs/heads/feature/testing\n");
       
       mockedExec.mockImplementation((cmd, _options, callback) => {
-        if (cmd.includes("symbolic-ref")) {
-          callback(null, "feature/testing\n", "");
-        } else if (cmd.includes("status --porcelain")) {
+        if (cmd.includes("status --porcelain")) {
           callback(null, " M src/index.ts\n?? tests/test.ts\n", "");
         } else if (cmd.includes("rev-list")) {
           callback(null, "3\n", "");
@@ -84,15 +90,12 @@ describe("GitService", () => {
       });
     });
 
-    it("should fallback to short commit hash if symbolic-ref fails", async () => {
+    it("should parse detached HEAD commit hash correctly", async () => {
       mockedExistsSync.mockReturnValue(true);
+      mockedReadFileSync.mockReturnValue("a1b2c3d4e5f67890\n");
       
       mockedExec.mockImplementation((cmd, _options, callback) => {
-        if (cmd.includes("symbolic-ref")) {
-          callback(new Error("not a symbolic ref"), "", "");
-        } else if (cmd.includes("rev-parse")) {
-          callback(null, "a1b2c3d\n", "");
-        } else if (cmd.includes("status --porcelain")) {
+        if (cmd.includes("status --porcelain")) {
           callback(null, "", "");
         } else if (cmd.includes("rev-list")) {
           callback(null, "0\n", "");
@@ -105,11 +108,10 @@ describe("GitService", () => {
 
     it("should handle error in rev-list and default unpushed to 0", async () => {
       mockedExistsSync.mockReturnValue(true);
+      mockedReadFileSync.mockReturnValue("ref: refs/heads/main\n");
       
       mockedExec.mockImplementation((cmd, _options, callback) => {
-        if (cmd.includes("symbolic-ref")) {
-          callback(null, "main\n", "");
-        } else if (cmd.includes("status --porcelain")) {
+        if (cmd.includes("status --porcelain")) {
           callback(null, "", "");
         } else if (cmd.includes("rev-list")) {
           callback(new Error("no upstream"), "", "");
@@ -123,6 +125,30 @@ describe("GitService", () => {
         unpushed: undefined,
         lastChecked: expect.any(Number)
       });
+    });
+
+    it("should support git worktrees by reading gitdir pointer", async () => {
+      mockedExistsSync.mockImplementation((p) => {
+        if (p.includes(".git")) { return true; }
+        if (p.includes("real_git_dir")) { return true; }
+        return false;
+      });
+      mockedStatSync.mockReturnValue({
+        isDirectory: () => false,
+        isFile: () => true,
+      });
+      mockedReadFileSync.mockImplementation((p) => {
+        if (p.endsWith(".git")) {
+          return "gitdir: /path/to/real_git_dir";
+        }
+        if (p.endsWith("HEAD")) {
+          return "ref: refs/heads/worktree-branch\n";
+        }
+        return "";
+      });
+
+      const status = await gitService.getStatus("/path/to/worktree");
+      expect(status?.branch).toBe("worktree-branch");
     });
   });
 });
