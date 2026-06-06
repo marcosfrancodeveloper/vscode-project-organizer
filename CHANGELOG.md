@@ -18,7 +18,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) 
 - **Direct HEAD Parsing**: Replaced heavy `git symbolic-ref`/`git rev-parse` process spawns with direct filesystem reads of `.git/HEAD` for branch name detection, eliminating spawn overhead.
 - **O(1) Parent Node Lookups**: Optimized the sidebar parent search algorithms from $O(N^2 \cdot \text{I/O})$ down to $O(N)$ with exactly one I/O operation per request, using an in-memory parent hierarchy map.
 - **Sorting Performance**: Partitioned directory and project nodes in a single pass ($O(N)$) and cached sorting order multipliers globally.
-- **Visual Architecture Diagram**: Replaced the raw Mermaid text block in `README.md` with a clean pre-rendered image asset (`resources/how-it-works.png`) to ensure correct rendering on the VS Code Marketplace.
+- **Visual Architecture Diagram**: Replaced the raw Mermaid text block in `README.md` with a clean, pre-rendered and optimized image asset (`resources/how-it-works.png`). The image has been compressed and downscaled to 800px width (~76 KB) to guarantee instant rendering on the VS Code Marketplace while maintaining a lightweight extension bundle.
 
 ## [1.1.1] - 2026-06-06
 
