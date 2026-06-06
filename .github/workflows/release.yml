@@ -8,7 +8,7 @@ on:
 
 jobs:
   publish:
-    name: Publish to Open VSX
+    name: Publish Extension
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
@@ -30,4 +30,7 @@ jobs:
         run: npm run test
 
       - name: Publish to Open VSX Registry
-        run: npm run publish -- -p ${{ secrets.OVSX_PAT }}
+        run: npm run publish:ovsx -- -p ${{ secrets.OVSX_PAT }}
+
+      - name: Publish to VS Code Marketplace
+        run: npm run publish:vsce -- -p ${{ secrets.VSCE_PAT }}

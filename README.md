@@ -7,7 +7,7 @@
   <a title="Learn more about Project Organizer" href="https://github.com/marcosfrancodeveloper/vscode-project-organizer"><img src="https://raw.githubusercontent.com/marcosfrancodeveloper/vscode-project-organizer/main/resources/icon.png" alt="Project Organizer Logo" width="160" height="160" /></a>
 </p>
 
-# What's new in Project Organizer 1.0
+# What's new in Project Organizer
 
 *   **Multilevel Hierarchical Organization:** Natively structure your projects into collapsible groups using forward slashes (e.g., `Work/Client-A/Frontend`).
 *   **Asynchronous Git Monitoring:** Background repository checking to automatically display the active branch, modified state (`• *`), and local commits pending upload (`↑N`).
@@ -16,18 +16,6 @@
 *   **Portable and Custom Persistence:** Save projects in the default workspace state or sync with an external file via `projectOrganizer.customProjectsFile`.
 *   **One-Click Imports:** Migrate seamlessly from the legacy *Project Manager* extension in either merge or replace mode.
 *   **Global Tree controls:** Expand and collapse all nested project groups globally with persistence inside `settings.json`.
-
-# Support
-
-**Project Organizer** is an open-source extension created for **Visual Studio Code**. If you find it useful, please consider supporting its development.
-
-<table align="center" width="40%" border="0">
-  <tr>
-    <td align="center">
-      <a title="GitHub Sponsors" href="https://github.com/sponsors/marcosfrancodeveloper"><img src="https://raw.githubusercontent.com/alefragnani/oss-resources/master/images/button-become-a-sponsor-rounded-small.png"/></a>
-    </td>
-  </tr>
-</table>
 
 # Project Organizer
 

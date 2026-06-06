@@ -126,10 +126,19 @@ export function registerFavoriteAndTreeActions(
     }
   );
 
+  // Comando: Atualizar a visualização em árvore
+  const refreshCommand = vscode.commands.registerCommand(
+    "projectOrganizer.refresh",
+    () => {
+      refreshCallback();
+    }
+  );
+
   context.subscriptions.push(
     favoriteProjectCommand,
     unfavoriteProjectCommand,
     expandAllCommand,
-    collapseAllCommand
+    collapseAllCommand,
+    refreshCommand
   );
 }

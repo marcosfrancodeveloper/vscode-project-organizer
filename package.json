@@ -299,7 +299,8 @@
     "compile": "node esbuild.js",
     "watch": "node esbuild.js --watch",
     "package": "npx @vscode/vsce package -o project-organizer.vsix",
-    "publish": "npx ovsx publish",
+    "publish:ovsx": "npx ovsx publish",
+    "publish:vsce": "npx @vscode/vsce publish",
     "test": "jest --no-watchman --detectOpenHandles",
     "test:watch": "jest --watch --no-watchman"
   },
