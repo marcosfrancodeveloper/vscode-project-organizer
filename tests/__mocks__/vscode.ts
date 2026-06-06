@@ -54,3 +54,45 @@ export interface ExtensionContext {
     update(key: string, value: any): Promise<void>;
   };
 }
+
+export enum TreeItemCollapsibleState {
+  None = 0,
+  Collapsed = 1,
+  Expanded = 2
+}
+
+export class TreeItem {
+  public id?: string;
+  public iconPath?: ThemeIcon | Uri | { light: Uri | ThemeIcon; dark: Uri | ThemeIcon };
+  public tooltip?: string | any;
+  public description?: string | boolean;
+  public contextValue?: string;
+  public command?: any;
+
+  constructor(
+    public readonly label: string | any,
+    public readonly collapsibleState: TreeItemCollapsibleState = TreeItemCollapsibleState.None
+  ) {}
+}
+
+export class ThemeIcon {
+  constructor(public readonly id: string, public readonly color?: any) {}
+}
+
+export class EventEmitter<T> {
+  private listeners: ((e: T) => any)[] = [];
+  get event() {
+    return (listener: (e: T) => any) => {
+      this.listeners.push(listener);
+      return {
+        dispose: () => {
+          this.listeners = this.listeners.filter(l => l !== listener);
+        }
+      };
+    };
+  }
+  fire(data: T): void {
+    this.listeners.forEach(l => l(data));
+  }
+}
+

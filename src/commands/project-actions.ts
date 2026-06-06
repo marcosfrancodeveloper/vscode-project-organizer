@@ -4,8 +4,9 @@ import { Project } from "../interfaces/models.interface";
 import { IStorageManager } from "../interfaces/services.interface";
 
 /**
- * Helper utilitário para extrair o objeto Project a partir do argumento recebido pelo comando do VS Code.
- * @param arg Argumento que pode ser um ProjectTreeItem ou o objeto Project bruto.
+ * Helper utilitário para extrair o objeto `Project`
+ * a partir do argumento recebido pelo comando do VS Code
+ * @param arg Argumento que pode ser um ProjectTreeItem ou o objeto Project bruto
  */
 export function getProjectFromArg(arg: any): Project | undefined {
   if (!arg) {
@@ -21,9 +22,9 @@ export function getProjectFromArg(arg: any): Project | undefined {
 }
 
 /**
- * Registra os comandos relacionados a ações diretas em projetos.
- * @param context Contexto da extensão.
- * @param storage Serviço de persistência.
+ * Registra os comandos relacionados a ações diretas em projetos
+ * @param context Contexto da extensão
+ * @param storage Serviço de persistência
  */
 export function registerProjectActions(
   context: vscode.ExtensionContext,

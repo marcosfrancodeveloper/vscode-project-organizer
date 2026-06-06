@@ -1,22 +1,25 @@
 import * as fs from "fs";
 import * as path from "path";
-import { Project } from "../interfaces/models.interface";
 import { IProjectScanner } from "../interfaces/services.interface";
 
 /**
- * Serviço que escaneia diretórios físicos à procura de marcações de projeto (ex: .git, package.json).
- * Implementa a interface IProjectScanner.
+ * Serviço que escaneia diretórios físicos à procura de marcações de projeto (ex: .git, package.json)
+ * @implements Implementa a interface `IProjectScanner`
  */
 export class ProjectScanner implements IProjectScanner {
   /**
-   * Varre um caminho recursivamente procurando marcadores de projetos (ex: `.git`, `package.json`).
+   * Varre um caminho recursivamente procurando marcadores de projetos
+   * @param basePath Caminho base para iniciar a varredura
+   * @param maxDepth Profundidade máxima de recursão
+   * @param ignoredFolders Array de pastas a serem ignoradas
+   * @returns Array de projetos encontrados
    */
   public async scan(
     basePath: string,
     maxDepth: number,
     ignoredFolders: string[]
-  ): Promise<Omit<Project, "id" | "lastAccessed">[]> {
-    const projects: Omit<Project, "id" | "lastAccessed">[] = [];
+  ): Promise<{ name: string; path: string; groupPath?: string }[]> {
+    const projects: { name: string; path: string; groupPath?: string }[] = [];
     const resolvedBase = path.resolve(basePath);
 
     if (!fs.existsSync(resolvedBase)) {
@@ -70,7 +73,7 @@ export class ProjectScanner implements IProjectScanner {
           projects.push({
             name: projectName,
             path: currentPath,
-            group: groupPath,
+            groupPath: groupPath,
           });
 
           // Se é um projeto, interrompe a recursão nesta ramificação

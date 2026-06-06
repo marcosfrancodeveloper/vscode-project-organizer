@@ -3,19 +3,25 @@ import { IStorageManager } from "../interfaces/services.interface";
 import { getProjectFromArg } from "./project-actions";
 
 /**
- * Registra os comandos relacionados a favoritos e controle de visualização da árvore lateral.
- * @param context Contexto da extensão.
- * @param storage Serviço de persistência de dados.
- * @param treeView Instância da TreeView de projetos.
- * @param refreshCallback Callback para atualizar visualmente a árvore de projetos.
- * @param treeItemCreator Função fábrica para criar instâncias de ProjectTreeItem para reveal.
+ * Registra os comandos relacionados a favoritos e controle de visualização da árvore lateral
+ * @param context Contexto da extensão
+ * @param storage Serviço de persistência de dados
+ * @param treeView Instância da TreeView de projetos
+ * @param refreshCallback Callback para atualizar visualmente a árvore de projetos
+ * @param treeItemCreator Função fábrica para criar instâncias de ProjectTreeItem para reveal
  */
 export function registerFavoriteAndTreeActions(
   context: vscode.ExtensionContext,
   storage: IStorageManager,
   treeView: vscode.TreeView<any>,
   refreshCallback: () => void,
-  treeItemCreator: (name: string, state: vscode.TreeItemCollapsibleState, type: string, project: any, path: string) => any
+  treeItemCreator: (
+    name: string,
+    state: vscode.TreeItemCollapsibleState,
+    type: string,
+    project: any,
+    path: string
+  ) => any
 ): void {
   // Comando: Favoritar Projeto
   const favoriteProjectCommand = vscode.commands.registerCommand(
@@ -71,25 +77,19 @@ export function registerFavoriteAndTreeActions(
         const projects = await storage.getProjects();
         const groups = new Set<string>();
         for (const p of projects) {
-          if (p.group) {
-            const parts = p.group.split("/");
-            let pathAcc = "";
-            for (const part of parts) {
-              pathAcc = pathAcc ? `${pathAcc}/${part}` : part;
-              groups.add(pathAcc);
-            }
+          const groupPath = await storage.getProjectGroupPath(p.id);
+          if (groupPath && groupPath.trim() !== "") {
+            groups.add(groupPath.trim());
           }
         }
 
         const sortedGroups = Array.from(groups).sort((a, b) => {
-          return a.split("/").length - b.split("/").length;
+          return a.localeCompare(b, undefined, { sensitivity: "base" });
         });
 
         for (const g of sortedGroups) {
-          const parts = g.split("/");
-          const name = parts[parts.length - 1];
           const item = treeItemCreator(
-            name,
+            g,
             vscode.TreeItemCollapsibleState.Expanded,
             "group",
             undefined,

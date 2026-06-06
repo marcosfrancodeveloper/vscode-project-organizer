@@ -4,6 +4,17 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0] - 2026-06-06
+
+### Added
+- **Manual Display Index / Custom Positions**: Added the ability to set a custom numeric position for individual projects and group folders via context menu (`Project Organizer: Set Position`).
+- **Sorting Criteria**: Added configuration settings and commands to sort projects alphabetically by Name or by Last Accessed date, in ascending or descending order.
+- **Project Favoriting and Archiving (Deprecation)**: Added direct context menu actions to favorite/unfavorite and archive (deprecate) projects, alongside settings to show or hide deprecated projects in the sidebar.
+- **Internationalization (i18n)**: Implemented full translations for French (`fr`) and Spanish (`es`) languages, covering the sidebar view titles, configuration descriptions, commands, and runtime alerts/notifications.
+
+### Changed
+- **Views Welcome Cleaning**: Removed broken Markdown image tags from welcome views empty state to ensure clean and correct interface rendering across all localized views.
+
 ## [1.0.4] - 2026-06-06
 
 ### Added

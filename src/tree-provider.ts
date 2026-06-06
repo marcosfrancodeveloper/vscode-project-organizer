@@ -4,28 +4,31 @@ import {
   GitStatus,
   TreeItemType,
   TreeScope,
-  ProjectGroup
+  ProjectGroup,
+  ProjectRegistryNode
 } from "./interfaces/models.interface";
 import { IStorageManager, IGitService } from "./interfaces/services.interface";
 
 /**
- * Item visual representando um nó na árvore lateral (pode ser a raiz, um grupo/pasta ou um projeto).
+ * Item visual representando um nó na árvore lateral
  */
 export class ProjectTreeItem extends vscode.TreeItem {
   /**
-   * Constrói uma representação visual para o nó na árvore.
-   * @param label Texto principal exibido.
-   * @param collapsibleState Estado de expansão (Collapsed, Expanded ou None).
-   * @param type Tipo do nó (root, grupo, projeto).
-   * @param project Objeto de projeto associado (se for do tipo project).
-   * @param fullGroupPath Caminho de grupo absoluto lógico (se for do tipo group).
-   * @param scope Escopo visual (Favoritos ou Todos).
+   * Constrói uma representação visual para o nó na árvore
+   * @param label Texto principal exibido
+   * @param collapsibleState Estado de expansão (Collapsed, Expanded ou None)
+   * @param type Tipo do nó (root, grupo, projeto)
+   * @param project Objeto de projeto associado (se for do tipo project)
+   * @param groupNode Nó de grupo associado (se for do tipo group)
+   * @param fullGroupPath Caminho de grupo absoluto lógico (se for do tipo group)
+   * @param scope Escopo visual
    */
   constructor(
     public readonly label: string,
     public readonly collapsibleState: vscode.TreeItemCollapsibleState,
     public readonly type: TreeItemType,
     public readonly project?: Project,
+    public readonly groupNode?: ProjectGroup,
     public readonly fullGroupPath?: string,
     public readonly scope?: TreeScope
   ) {
@@ -80,8 +83,8 @@ export class ProjectTreeItem extends vscode.TreeItem {
 }
 
 /**
- * Provedor de dados (TreeDataProvider) que gerencia e renderiza os nós da barra lateral.
- * Depende das interfaces de serviço IStorageManager e IGitService por Injeção de Dependências.
+ * Provedor de dados (`TreeDataProvider`) que gerencia e renderiza os nós da barra lateral.
+ * Depende das interfaces de serviço `IStorageManager` e `IGitService` por Injeção de Dependências.
  */
 export class ProjectTreeProvider
   implements vscode.TreeDataProvider<ProjectTreeItem>, vscode.Disposable {
@@ -93,38 +96,38 @@ export class ProjectTreeProvider
   > = this._onDidChangeTreeData.event;
 
   private gitStatusCache: Map<string, GitStatus> = new Map();
+  private gitInitialTimeout: NodeJS.Timeout | undefined;
   private gitUpdateTimer: NodeJS.Timeout | undefined;
 
-  /**
-   * Inicializa o provedor de dados da árvore.
-   * @param storageManager Serviço de armazenamento persistente.
-   * @param gitService Serviço de monitoramento do status Git.
-   */
   constructor(
     private storageManager: IStorageManager,
-    private gitService: IGitService
+    private gitService: IGitService,
+    private defaultScope: TreeScope = "all"
   ) {
     this.startGitStatusPoller();
   }
 
   /**
-   * Força uma atualização visual completa em todos os nós da árvore lateral.
+   * Força uma atualização visual completa em todos os nós da árvore lateral
    */
   public refresh(): void {
     this._onDidChangeTreeData.fire();
   }
 
   /**
-   * Descarta timers e limpa recursos associados.
+   * Descarta timers e limpa recursos associados
    */
   public dispose(): void {
+    if (this.gitInitialTimeout) {
+      clearTimeout(this.gitInitialTimeout);
+    }
     if (this.gitUpdateTimer) {
       clearInterval(this.gitUpdateTimer);
     }
   }
 
   /**
-   * Inicia o atualizador assíncrono em segundo plano para o status Git dos projetos.
+   * Inicia o atualizador assíncrono em segundo plano para o status Git dos projetos
    */
   private startGitStatusPoller(): void {
     const updateStatus = async () => {
@@ -166,7 +169,7 @@ export class ProjectTreeProvider
     };
 
     // Agenda execuções inicial e periódicas
-    setTimeout(updateStatus, 1000);
+    this.gitInitialTimeout = setTimeout(updateStatus, 1000);
 
     const config = vscode.workspace.getConfiguration("projectOrganizer");
     const interval = config.get<number>("gitStatusInterval", 15000);
@@ -175,8 +178,8 @@ export class ProjectTreeProvider
   }
 
   /**
-   * Monta e enriquece os metadados do item de árvore para exibição gráfica.
-   * @param element O item de árvore correspondente.
+   * Monta e enriquece os metadados do item de árvore para exibição gráfica
+   * @param element O item de árvore correspondente
    */
   public getTreeItem(element: ProjectTreeItem): vscode.TreeItem {
     if (element.type === "root-favorites") {
@@ -189,13 +192,25 @@ export class ProjectTreeProvider
       element.iconPath = undefined;
     } else if (element.type === "project" && element.project) {
       const project = element.project;
-      element.contextValue = project.favorite ? "project-favorite" : "project";
+
+      // Constrói contextValue combinando favorite e deprecated
+      let contextVal = "project";
+      if (project.favorite) {
+        contextVal += "-favorite";
+      }
+      if (project.deprecated) {
+        contextVal += "-deprecated";
+      }
+      element.contextValue = contextVal;
+
       const cachedGit = this.gitStatusCache.get(project.id);
 
       const isGit = this.gitService.isGitRepository(project.path);
-      element.iconPath = isGit
-        ? new vscode.ThemeIcon("repo")
-        : new vscode.ThemeIcon("root-folder");
+      element.iconPath = project.deprecated
+        ? new vscode.ThemeIcon("archive")
+        : isGit
+          ? new vscode.ThemeIcon("repo")
+          : new vscode.ThemeIcon("root-folder");
 
       let gitDesc = "";
       if (isGit && cachedGit) {
@@ -215,17 +230,32 @@ export class ProjectTreeProvider
       if (element.scope === "favorites") {
         // Favoritos exibe o caminho do grupo como contexto
         const parts: string[] = [];
-        if (project.group) {
-          parts.push(project.group);
+        if (element.fullGroupPath) {
+          parts.push(element.fullGroupPath);
         }
         if (gitDesc) {
           parts.push(gitDesc);
         }
+        if (project.deprecated) {
+          parts.push(vscode.l10n.t("(deprecated)"));
+        }
+        if (project.position !== undefined) {
+          parts.push(`[${project.position}]`);
+        }
         element.description = parts.length > 0 ? parts.join(" • ") : undefined;
       } else {
         // Exibição normal exibe indicador de estrela se favoritado
-        if (gitDesc) {
-          element.description = project.favorite ? `★ ${gitDesc}` : gitDesc;
+        let suffix = gitDesc;
+        if (project.deprecated) {
+          const depText = vscode.l10n.t("(deprecated)");
+          suffix = suffix ? `${suffix} • ${depText}` : depText;
+        }
+        if (project.position !== undefined) {
+          const posText = `[${project.position}]`;
+          suffix = suffix ? `${suffix} • ${posText}` : posText;
+        }
+        if (suffix) {
+          element.description = project.favorite ? `★ ${suffix}` : suffix;
         } else {
           element.description = project.favorite ? "★" : undefined;
         }
@@ -233,264 +263,390 @@ export class ProjectTreeProvider
     } else if (element.type === "group") {
       element.contextValue = "group";
       element.iconPath = new vscode.ThemeIcon("folder");
+      if (element.groupNode && element.groupNode.position !== undefined) {
+        element.description = `[${element.groupNode.position}]`;
+      } else {
+        element.description = undefined;
+      }
     }
 
     return element;
   }
 
   /**
-   * Resolve e retorna os filhos de um determinado nó da árvore.
-   * @param element Nó pai (se omitido, carrega as raízes).
+   * Filtra recursivamente projetos depreciados da árvore de nós
+   */
+  private filterDeprecatedNodes(nodes: ProjectRegistryNode[]): ProjectRegistryNode[] {
+    const result: ProjectRegistryNode[] = [];
+    for (const node of nodes) {
+      if ("isFolder" in node && node.isFolder) {
+        const filteredChildren = this.filterDeprecatedNodes(node.children);
+        result.push({
+          ...node,
+          children: filteredChildren
+        });
+      } else {
+        const project = node as Project;
+        if (!project.deprecated) {
+          result.push(node);
+        }
+      }
+    }
+    return result;
+  }
+
+  /**
+   * Resolve e retorna os filhos de um determinado nó da árvore
+   * @param element Nó pai (se omitido, carrega as raízes)
    */
   public async getChildren(element?: ProjectTreeItem): Promise<ProjectTreeItem[]> {
-    const projects = await this.storageManager.getProjects();
+    const config = vscode.workspace.getConfiguration("projectOrganizer");
+    const showDeprecated = config.get<boolean>("showDeprecated", true);
+
+    let tree = await this.storageManager.getProjectsTree();
+    if (!showDeprecated) {
+      tree = this.filterDeprecatedNodes(tree);
+    }
+
+    const flatProjects = await this.storageManager.getProjects();
+    const activeFlatProjects = showDeprecated
+      ? flatProjects
+      : flatProjects.filter((p) => !p.deprecated);
 
     if (!element) {
-      const favoritesCount = projects.filter((p) => p.favorite).length;
-      return [
-        new ProjectTreeItem(
-          vscode.l10n.t("Favorites ({0})", favoritesCount),
-          vscode.TreeItemCollapsibleState.Expanded,
-          "root-favorites",
-          undefined,
-          undefined,
-          "favorites"
-        ),
-        new ProjectTreeItem(
-          vscode.l10n.t("All Projects ({0})", projects.length),
-          vscode.TreeItemCollapsibleState.Expanded,
-          "root-projects",
-          undefined,
-          undefined,
-          "all"
-        ),
-      ];
+      if (activeFlatProjects.length === 0 && tree.length === 0) {
+        return [];
+      }
+
+      if (this.defaultScope === "favorites") {
+        const favorites = activeFlatProjects.filter((p) => p.favorite);
+        const sortedFavorites = this.sortProjects(favorites);
+        return Promise.all(
+          sortedFavorites.map(async (project) => {
+            const groupPath = await this.storageManager.getProjectGroupPath(project.id);
+            return new ProjectTreeItem(
+              project.deprecated ? strikethrough(project.name) : project.name,
+              vscode.TreeItemCollapsibleState.None,
+              "project",
+              project,
+              undefined,
+              groupPath,
+              "favorites"
+            );
+          })
+        );
+      } else {
+        const expanded = config.get<boolean>("treeExpanded", false);
+        const collapsibleState = expanded
+          ? vscode.TreeItemCollapsibleState.Expanded
+          : vscode.TreeItemCollapsibleState.Collapsed;
+
+        const sortedNodes = this.sortRegistryNodes(tree);
+        return sortedNodes.map((node) => {
+          if ("isFolder" in node && node.isFolder) {
+            return new ProjectTreeItem(
+              node.name,
+              collapsibleState,
+              "group",
+              undefined,
+              node,
+              node.name,
+              "all"
+            );
+          } else {
+            const project = node as Project;
+            return new ProjectTreeItem(
+              project.deprecated ? strikethrough(project.name) : project.name,
+              vscode.TreeItemCollapsibleState.None,
+              "project",
+              project,
+              undefined,
+              undefined,
+              "all"
+            );
+          }
+        });
+      }
     }
 
     const scope = element.scope || "all";
 
-    // Lógica diferenciada para favoritos: exibe uma lista plana direta de projetos
+    // Lógica para favoritos
     if (element.type === "root-favorites") {
-      const favorites = projects.filter((p) => p.favorite);
-      const sortedFavorites = [...favorites].sort((a, b) =>
-        a.name.localeCompare(b.name, undefined, { sensitivity: "base" })
+      const favorites = activeFlatProjects.filter((p) => p.favorite);
+      const sortedFavorites = this.sortProjects(favorites);
+      return Promise.all(
+        sortedFavorites.map(
+          async (project) => {
+            const groupPath = await this.storageManager.getProjectGroupPath(project.id);
+            return new ProjectTreeItem(
+              project.deprecated ? strikethrough(project.name) : project.name,
+              vscode.TreeItemCollapsibleState.None,
+              "project",
+              project,
+              undefined,
+              groupPath,
+              "favorites"
+            );
+          }
+        )
       );
-      return sortedFavorites.map(
-        (project) =>
-          new ProjectTreeItem(
-            project.name,
+    }
+
+    const expanded = config.get<boolean>("treeExpanded", false);
+    const collapsibleState = expanded
+      ? vscode.TreeItemCollapsibleState.Expanded
+      : vscode.TreeItemCollapsibleState.Collapsed;
+
+    // Lógica para a raiz de projetos
+    if (element.type === "root-projects") {
+      const sortedNodes = this.sortRegistryNodes(tree);
+      return sortedNodes.map((node) => {
+        if ("isFolder" in node && node.isFolder) {
+          return new ProjectTreeItem(
+            node.name,
+            collapsibleState,
+            "group",
+            undefined,
+            node,
+            node.name,
+            scope
+          );
+        } else {
+          const project = node as Project;
+          return new ProjectTreeItem(
+            project.deprecated ? strikethrough(project.name) : project.name,
             vscode.TreeItemCollapsibleState.None,
             "project",
             project,
             undefined,
-            "favorites"
-          )
+            undefined,
+            scope
+          );
+        }
+      });
+    }
+
+    // Lógica para subgrupos
+    if (element.type === "group" && element.groupNode) {
+      const sortedNodes = this.sortRegistryNodes(element.groupNode.children);
+      return Promise.all(
+        sortedNodes.map(async (node) => {
+          if ("isFolder" in node && node.isFolder) {
+            const subGroupPath = element.fullGroupPath
+              ? `${element.fullGroupPath}/${node.name}`
+              : node.name;
+            return new ProjectTreeItem(
+              node.name,
+              collapsibleState,
+              "group",
+              undefined,
+              node,
+              subGroupPath,
+              scope
+            );
+          } else {
+            const project = node as Project;
+            return new ProjectTreeItem(
+              project.deprecated ? strikethrough(project.name) : project.name,
+              vscode.TreeItemCollapsibleState.None,
+              "project",
+              project,
+              undefined,
+              undefined,
+              scope
+            );
+          }
+        })
       );
-    }
-
-    // Lógica padrão de Todos os Projetos: agrupa em pastas hierárquicas
-    const filteredProjects = scope === "favorites"
-      ? projects.filter((p) => p.favorite)
-      : projects;
-
-    const rootNode = this.buildLogicalTree(filteredProjects);
-
-    if (element.type === "root-projects") {
-      return this.getNodeChildren(rootNode, scope);
-    }
-
-    if (element.type === "group" && element.fullGroupPath) {
-      const targetNode = this.findLogicalNode(rootNode, element.fullGroupPath);
-      if (targetNode) {
-        return this.getNodeChildren(targetNode, scope);
-      }
     }
 
     return [];
   }
 
   /**
-   * Constrói a estrutura de árvore lógica e recursiva baseada no delimitador "/" do grupo de cada projeto.
-   * @param projects Array de projetos para agrupar.
+   * Ordena uma lista contendo tanto subgrupos quanto projetos de acordo com as preferências
    */
-  private buildLogicalTree(projects: Project[]): ProjectGroup {
-    const root: ProjectGroup = {
-      name: "root",
-      fullPath: "",
-      subgroups: new Map(),
-      projects: [],
+  private sortRegistryNodes(nodes: ProjectRegistryNode[]): ProjectRegistryNode[] {
+    const config = vscode.workspace.getConfiguration("projectOrganizer");
+    const sortBy = config.get<string>("sortBy", "name");
+    const sortOrder = config.get<string>("sortOrder", "asc");
+
+    const folders = nodes.filter((n) => "isFolder" in n && n.isFolder) as ProjectGroup[];
+    const projects = nodes.filter((n) => !("isFolder" in n && n.isFolder)) as Project[];
+
+    // 1. Ordena os subgrupos
+    folders.sort((a, b) => {
+      const posA = a.position;
+      const posB = b.position;
+
+      if (posA !== undefined && posB !== undefined) {
+        return posA - posB;
+      }
+      if (posA !== undefined) {
+        return -1;
+      }
+      if (posB !== undefined) {
+        return 1;
+      }
+
+      const diff = a.name.localeCompare(b.name, undefined, { sensitivity: "base" });
+      return sortOrder === "desc" ? -diff : diff;
+    });
+
+    // 2. Ordena os projetos irmãos seguindo as regras de pinning e preferências
+    const sortedProjects = [...projects].sort((a, b) => {
+      const posA = a.position;
+      const posB = b.position;
+
+      if (posA !== undefined && posB !== undefined) {
+        return posA - posB;
+      }
+      if (posA !== undefined) {
+        return -1;
+      }
+      if (posB !== undefined) {
+        return 1;
+      }
+
+      if (sortBy === "lastAccessed") {
+        const diff = a.lastAccessed - b.lastAccessed;
+        return sortOrder === "desc" ? -diff : diff;
+      }
+      const diff = a.name.localeCompare(b.name, undefined, { sensitivity: "base" });
+      return sortOrder === "desc" ? -diff : diff;
+    });
+
+    return [...folders, ...sortedProjects];
+  }
+
+  /**
+   * Ordena uma lista de projetos planos (para exibição em favoritos)
+   */
+  private sortProjects(projects: Project[]): Project[] {
+    const config = vscode.workspace.getConfiguration("projectOrganizer");
+    const sortBy = config.get<string>("sortBy", "name");
+    const sortOrder = config.get<string>("sortOrder", "asc");
+
+    return [...projects].sort((a, b) => {
+      const posA = a.position;
+      const posB = b.position;
+
+      if (posA !== undefined && posB !== undefined) {
+        return posA - posB;
+      }
+      if (posA !== undefined) {
+        return -1;
+      }
+      if (posB !== undefined) {
+        return 1;
+      }
+
+      if (sortBy === "lastAccessed") {
+        const diff = a.lastAccessed - b.lastAccessed;
+        return sortOrder === "desc" ? -diff : diff;
+      }
+      const diff = a.name.localeCompare(b.name, undefined, { sensitivity: "base" });
+      return sortOrder === "desc" ? -diff : diff;
+    });
+  }
+
+  /**
+   * Helper assíncrono para encontrar o nó pai de um projeto ou subgrupo
+   */
+  private async findParentOfNode(
+    idOrName: string,
+    isSearchingFolder: boolean = false
+  ): Promise<ProjectGroup | undefined> {
+    const tree = await this.storageManager.getProjectsTree();
+    let parentGroup: ProjectGroup | undefined;
+
+    const search = (nodes: ProjectRegistryNode[], parent?: ProjectGroup): boolean => {
+      for (const node of nodes) {
+        if (isSearchingFolder) {
+          if ("isFolder" in node && node.isFolder) {
+            if (node.name === idOrName) {
+              parentGroup = parent;
+              return true;
+            }
+            if (search(node.children, node)) {
+              return true;
+            }
+          }
+        } else {
+          if (!("isFolder" in node && node.isFolder)) {
+            const project = node as Project;
+            if (project.id === idOrName) {
+              parentGroup = parent;
+              return true;
+            }
+          } else {
+            if (search(node.children, node)) {
+              return true;
+            }
+          }
+        }
+      }
+      return false;
     };
 
-    for (const project of projects) {
-      if (!project.group) {
-        root.projects.push(project);
-        continue;
-      }
-
-      const parts = project.group.split("/");
-      let currentNode = root;
-      let currentPath = "";
-
-      for (const part of parts) {
-        const trimmedPart = part.trim();
-        if (trimmedPart === "") {
-          continue;
-        }
-
-        currentPath = currentPath
-          ? `${currentPath}/${trimmedPart}`
-          : trimmedPart;
-
-        if (!currentNode.subgroups.has(trimmedPart)) {
-          currentNode.subgroups.set(trimmedPart, {
-            name: trimmedPart,
-            fullPath: currentPath,
-            subgroups: new Map(),
-            projects: [],
-          });
-        }
-        currentNode = currentNode.subgroups.get(trimmedPart)!;
-      }
-
-      currentNode.projects.push(project);
-    }
-
-    return root;
+    search(tree);
+    return parentGroup;
   }
 
   /**
-   * Encontra de forma recursiva um determinado nó da árvore através de seu caminho lógico.
-   * @param node Nó inicial da busca.
-   * @param targetPath Caminho lógico buscado (ex: "Trabalho/Frontend").
+   * Helper assíncrono para construir o caminho absoluto lógico de um grupo
    */
-  private findLogicalNode(node: ProjectGroup, targetPath: string): ProjectGroup | undefined {
-    if (node.fullPath === targetPath) {
-      return node;
+  private async getGroupNodePath(groupNode: ProjectGroup): Promise<string> {
+    const parts: string[] = [groupNode.name];
+    let parent = await this.findParentOfNode(groupNode.name, true);
+    while (parent) {
+      parts.unshift(parent.name);
+      parent = await this.findParentOfNode(parent.name, true);
     }
-
-    for (const subgroup of node.subgroups.values()) {
-      const found = this.findLogicalNode(subgroup, targetPath);
-      if (found) {
-        return found;
-      }
-    }
-
-    return undefined;
+    return parts.join("/");
   }
 
   /**
-   * Retorna os subgrupos e projetos filhos convertidos para itens de exibição.
-   * @param node Nó lógico pai.
-   * @param scope Escopo de visualização da árvore.
+   * Retorna o item pai lógico para permitir a navegação e reveal corretos na TreeView do VS Code
    */
-  private getNodeChildren(node: ProjectGroup, scope: TreeScope): ProjectTreeItem[] {
-    const items: ProjectTreeItem[] = [];
-
-    const config = vscode.workspace.getConfiguration("projectOrganizer");
-    const expanded = config.get<boolean>("treeExpanded", false);
-    const collapsibleState = expanded
-      ? vscode.TreeItemCollapsibleState.Expanded
-      : vscode.TreeItemCollapsibleState.Collapsed;
-
-    // 1. Adiciona subpastas (subgrupos) ordenadas alfabeticamente
-    const sortedSubgroupKeys = Array.from(node.subgroups.keys()).sort((a, b) =>
-      a.localeCompare(b, undefined, { sensitivity: "base" })
-    );
-
-    for (const key of sortedSubgroupKeys) {
-      const sub = node.subgroups.get(key)!;
-      items.push(
-        new ProjectTreeItem(
-          sub.name,
-          collapsibleState,
-          "group",
-          undefined,
-          sub.fullPath,
-          scope
-        )
-      );
-    }
-
-    // 2. Adiciona projetos filhos ordenados alfabeticamente
-    const sortedProjects = [...node.projects].sort((a, b) =>
-      a.name.localeCompare(b.name, undefined, { sensitivity: "base" })
-    );
-
-    for (const project of sortedProjects) {
-      items.push(
-        new ProjectTreeItem(
-          project.name,
-          vscode.TreeItemCollapsibleState.None,
-          "project",
-          project,
-          undefined,
-          scope
-        )
-      );
-    }
-
-    return items;
-  }
-
-  /**
-   * Retorna o item pai lógico para permitir a navegação e reveal corretos na TreeView do VS Code.
-   * @param element Item de árvore cujo pai deseja-se resolver.
-   */
-  public getParent(element: ProjectTreeItem): ProjectTreeItem | undefined {
+  public async getParent(element: ProjectTreeItem): Promise<ProjectTreeItem | undefined> {
     const scope = element.scope || "all";
     if (element.type === "project" && element.project) {
-      const project = element.project;
       if (scope === "favorites") {
-        return new ProjectTreeItem(
-          vscode.l10n.t("Favorites"),
-          vscode.TreeItemCollapsibleState.Expanded,
-          "root-favorites",
-          undefined,
-          undefined,
-          "favorites"
-        );
+        return undefined;
       }
-      if (!project.group) {
-        return new ProjectTreeItem(
-          vscode.l10n.t("All Projects"),
-          vscode.TreeItemCollapsibleState.Expanded,
-          "root-projects",
-          undefined,
-          undefined,
-          scope
-        );
+
+      const parentNode = await this.findParentOfNode(element.project.id, false);
+      if (!parentNode) {
+        return undefined;
       }
-      const parts = project.group.split("/");
-      const parentName = parts[parts.length - 1];
+
+      const parentPath = await this.getGroupNodePath(parentNode);
       return new ProjectTreeItem(
-        parentName,
+        parentNode.name,
         vscode.TreeItemCollapsibleState.Expanded,
         "group",
         undefined,
-        project.group,
+        parentNode,
+        parentPath,
         scope
       );
     }
 
-    if (element.type === "group" && element.fullGroupPath) {
-      const parts = element.fullGroupPath.split("/");
-      if (parts.length <= 1) {
-        return new ProjectTreeItem(
-          vscode.l10n.t("All Projects"),
-          vscode.TreeItemCollapsibleState.Expanded,
-          "root-projects",
-          undefined,
-          undefined,
-          scope
-        );
+    if (element.type === "group" && element.groupNode) {
+      const parentNode = await this.findParentOfNode(element.groupNode.name, true);
+      if (!parentNode) {
+        return undefined;
       }
-      const parentPath = parts.slice(0, -1).join("/");
-      const parentName = parts[parts.length - 2];
+
+      const parentPath = await this.getGroupNodePath(parentNode);
       return new ProjectTreeItem(
-        parentName,
+        parentNode.name,
         vscode.TreeItemCollapsibleState.Expanded,
         "group",
         undefined,
+        parentNode,
         parentPath,
         scope
       );
@@ -498,4 +654,11 @@ export class ProjectTreeProvider
 
     return undefined;
   }
+}
+
+/**
+ * Função auxiliar para aplicar riscado (strikethrough) em texto utilizando caracteres Unicode
+ */
+function strikethrough(text: string): string {
+  return text.split("").map((c) => c + "\u0336").join("");
 }

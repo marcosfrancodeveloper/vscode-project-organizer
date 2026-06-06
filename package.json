@@ -2,7 +2,7 @@
   "name": "project-organizer",
   "displayName": "Project Organizer",
   "description": "%extension.description%",
-  "version": "1.0.4",
+  "version": "1.1.0",
   "publisher": "marcosfrancodeveloper",
   "license": "GPL-3.0-or-later",
   "l10n": "./l10n",
@@ -40,12 +40,27 @@
     "views": {
       "project-organizer-container": [
         {
+          "id": "projectOrganizer.favoritesView",
+          "name": "%views.favorites.name%",
+          "type": "tree"
+        },
+        {
           "id": "projectOrganizer.projectsView",
           "name": "%views.projects.name%",
           "type": "tree"
         }
       ]
     },
+    "viewsWelcome": [
+      {
+        "view": "projectOrganizer.projectsView",
+        "contents": "%viewsWelcome.contents%"
+      },
+      {
+        "view": "projectOrganizer.favoritesView",
+        "contents": "%viewsWelcome.favorites.contents%"
+      }
+    ],
     "commands": [
       {
         "command": "projectOrganizer.refresh",
@@ -126,41 +141,101 @@
         "command": "projectOrganizer.unfavoriteProject",
         "title": "%command.unfavoriteProject%",
         "icon": "$(star-full)"
+      },
+      {
+        "command": "projectOrganizer.deprecateProject",
+        "title": "%command.deprecateProject%",
+        "icon": "$(archive)"
+      },
+      {
+        "command": "projectOrganizer.undeprecateProject",
+        "title": "%command.undeprecateProject%",
+        "icon": "$(go-to-file)"
+      },
+      {
+        "command": "projectOrganizer.changeSortBy",
+        "title": "%command.changeSortBy%",
+        "icon": "$(sort-precedence)"
+      },
+      {
+        "command": "projectOrganizer.changeSortOrder",
+        "title": "%command.changeSortOrder%",
+        "icon": "$(arrow-both)"
+      },
+      {
+        "command": "projectOrganizer.setPosition",
+        "title": "%command.setPosition%",
+        "icon": "$(symbol-numeric)"
       }
     ],
     "menus": {
       "view/title": [
         {
-          "command": "projectOrganizer.scanProjects",
+          "command": "projectOrganizer.searchProject",
+          "when": "view == projectOrganizer.projectsView || view == projectOrganizer.favoritesView",
+          "group": "navigation@1"
+        },
+        {
+          "command": "projectOrganizer.changeSortBy",
+          "when": "view == projectOrganizer.projectsView || view == projectOrganizer.favoritesView",
+          "group": "navigation@2"
+        },
+        {
+          "command": "projectOrganizer.changeSortOrder",
+          "when": "view == projectOrganizer.projectsView || view == projectOrganizer.favoritesView",
+          "group": "navigation@3"
+        },
+        {
+          "command": "projectOrganizer.expandAll",
           "when": "view == projectOrganizer.projectsView",
+          "group": "navigation@4"
+        },
+        {
+          "command": "projectOrganizer.collapseAll",
+          "when": "view == projectOrganizer.projectsView",
+          "group": "navigation@5"
+        },
+        {
+          "command": "projectOrganizer.refresh",
+          "when": "view == projectOrganizer.projectsView || view == projectOrganizer.favoritesView",
+          "group": "navigation@6"
+        },
+        {
+          "command": "projectOrganizer.scanProjects",
+          "when": "view == projectOrganizer.projectsView || view == projectOrganizer.favoritesView",
           "group": "secondary@1"
         },
         {
           "command": "projectOrganizer.editProjectsJson",
-          "when": "view == projectOrganizer.projectsView",
+          "when": "view == projectOrganizer.projectsView || view == projectOrganizer.favoritesView",
           "group": "secondary@2"
         },
         {
           "command": "projectOrganizer.importProjectManager",
-          "when": "view == projectOrganizer.projectsView",
+          "when": "view == projectOrganizer.projectsView || view == projectOrganizer.favoritesView",
           "group": "secondary@3"
         }
       ],
       "view/item/context": [
         {
           "command": "projectOrganizer.favoriteProject",
-          "when": "viewItem == project",
+          "when": "viewItem == project || viewItem == project-deprecated",
           "group": "inline@1"
         },
         {
           "command": "projectOrganizer.unfavoriteProject",
-          "when": "viewItem == project-favorite",
+          "when": "viewItem == project-favorite || viewItem == project-favorite-deprecated",
           "group": "inline@1"
         },
         {
           "command": "projectOrganizer.openProjectInNewWindow",
-          "when": "viewItem == project || viewItem == project-favorite",
+          "when": "viewItem == project || viewItem == project-favorite || viewItem == project-deprecated || viewItem == project-favorite-deprecated",
           "group": "inline@2"
+        },
+        {
+          "command": "projectOrganizer.setPosition",
+          "when": "viewItem == project || viewItem == project-favorite || viewItem == project-deprecated || viewItem == project-favorite-deprecated || viewItem == group",
+          "group": "inline@3"
         },
         {
           "command": "projectOrganizer.refresh",
@@ -199,42 +274,57 @@
         },
         {
           "command": "projectOrganizer.openProject",
-          "when": "viewItem == project || viewItem == project-favorite",
+          "when": "viewItem == project || viewItem == project-favorite || viewItem == project-deprecated || viewItem == project-favorite-deprecated",
           "group": "1_open@1"
         },
         {
           "command": "projectOrganizer.openProjectInNewWindow",
-          "when": "viewItem == project || viewItem == project-favorite",
+          "when": "viewItem == project || viewItem == project-favorite || viewItem == project-deprecated || viewItem == project-favorite-deprecated",
           "group": "1_open@2"
         },
         {
           "command": "projectOrganizer.favoriteProject",
-          "when": "viewItem == project",
+          "when": "viewItem == project || viewItem == project-deprecated",
           "group": "1_modification@1"
         },
         {
           "command": "projectOrganizer.unfavoriteProject",
-          "when": "viewItem == project-favorite",
+          "when": "viewItem == project-favorite || viewItem == project-favorite-deprecated",
           "group": "1_modification@1"
         },
         {
           "command": "projectOrganizer.renameProject",
-          "when": "viewItem == project || viewItem == project-favorite",
+          "when": "viewItem == project || viewItem == project-favorite || viewItem == project-deprecated || viewItem == project-favorite-deprecated",
           "group": "1_modification@2"
         },
         {
           "command": "projectOrganizer.removeProject",
-          "when": "viewItem == project || viewItem == project-favorite",
+          "when": "viewItem == project || viewItem == project-favorite || viewItem == project-deprecated || viewItem == project-favorite-deprecated",
           "group": "1_modification@3"
         },
         {
-          "command": "projectOrganizer.openTerminal",
+          "command": "projectOrganizer.deprecateProject",
           "when": "viewItem == project || viewItem == project-favorite",
+          "group": "1_modification@4"
+        },
+        {
+          "command": "projectOrganizer.undeprecateProject",
+          "when": "viewItem == project-deprecated || viewItem == project-favorite-deprecated",
+          "group": "1_modification@4"
+        },
+        {
+          "command": "projectOrganizer.setPosition",
+          "when": "viewItem == project || viewItem == project-favorite || viewItem == project-deprecated || viewItem == project-favorite-deprecated || viewItem == group",
+          "group": "1_modification@5"
+        },
+        {
+          "command": "projectOrganizer.openTerminal",
+          "when": "viewItem == project || viewItem == project-favorite || viewItem == project-deprecated || viewItem == project-favorite-deprecated",
           "group": "2_actions@1"
         },
         {
           "command": "projectOrganizer.revealInFinder",
-          "when": "viewItem == project || viewItem == project-favorite",
+          "when": "viewItem == project || viewItem == project-favorite || viewItem == project-deprecated || viewItem == project-favorite-deprecated",
           "group": "2_actions@2"
         }
       ]
@@ -291,6 +381,37 @@
           "type": "boolean",
           "default": false,
           "description": "%config.treeExpanded.description%"
+        },
+        "projectOrganizer.showDeprecated": {
+          "type": "boolean",
+          "default": true,
+          "description": "%config.showDeprecated.description%"
+        },
+        "projectOrganizer.sortBy": {
+          "type": "string",
+          "enum": [
+            "name",
+            "lastAccessed"
+          ],
+          "enumDescriptions": [
+            "%config.sortBy.name.description%",
+            "%config.sortBy.lastAccessed.description%"
+          ],
+          "default": "name",
+          "description": "%config.sortBy.description%"
+        },
+        "projectOrganizer.sortOrder": {
+          "type": "string",
+          "enum": [
+            "asc",
+            "desc"
+          ],
+          "enumDescriptions": [
+            "%config.sortOrder.asc.description%",
+            "%config.sortOrder.desc.description%"
+          ],
+          "default": "asc",
+          "description": "%config.sortOrder.description%"
         }
       }
     }
@@ -299,6 +420,7 @@
     "compile": "node esbuild.js",
     "watch": "node esbuild.js --watch",
     "package": "npx @vscode/vsce package -o project-organizer.vsix",
+    "build": "npm run compile && npm run package",
     "publish:ovsx": "npx ovsx publish",
     "publish:vsce": "npx @vscode/vsce publish",
     "test": "jest --no-watchman --detectOpenHandles",

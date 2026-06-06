@@ -5,11 +5,12 @@ import { IStorageManager, IProjectScanner } from "../interfaces/services.interfa
 import { getProjectFromArg } from "./project-actions";
 
 /**
- * Registra os comandos relacionados ao gerenciamento estrutural de projetos (CRUD, busca fuzzy, escaneamento e importações).
- * @param context Contexto da extensão.
- * @param storage Serviço de persistência de dados.
- * @param scanner Serviço de escaneamento automático.
- * @param refreshCallback Callback para atualizar a interface gráfica da árvore.
+ * Registra os comandos relacionados ao gerenciamento
+ * estrutural de projetos (CRUD, busca fuzzy, escaneamento e importações)
+ * @param context Contexto da extensão
+ * @param storage Serviço de persistência de dados
+ * @param scanner Serviço de escaneamento automático
+ * @param refreshCallback Callback para atualizar a interface gráfica da árvore
  */
 export function registerProjectManagement(
   context: vscode.ExtensionContext,
@@ -118,12 +119,17 @@ export function registerProjectManagement(
         }
 
         const picked = await vscode.window.showQuickPick(
-          projects.map((p) => ({
-            label: p.name,
-            description: p.group || "Sem grupo",
-            detail: p.path,
-            project: p,
-          })),
+          await Promise.all(
+            projects.map(async (p) => {
+              const groupPath = await storage.getProjectGroupPath(p.id);
+              return {
+                label: p.name,
+                description: groupPath || vscode.l10n.t("No group"),
+                detail: p.path,
+                project: p,
+              };
+            })
+          ),
           { placeHolder: vscode.l10n.t("Select the project you want to remove") }
         );
 
@@ -167,11 +173,16 @@ export function registerProjectManagement(
         }
 
         const picked = await vscode.window.showQuickPick(
-          projects.map((p) => ({
-            label: p.name,
-            description: p.group || "Sem grupo",
-            project: p,
-          })),
+          await Promise.all(
+            projects.map(async (p) => {
+              const groupPath = await storage.getProjectGroupPath(p.id);
+              return {
+                label: p.name,
+                description: groupPath || vscode.l10n.t("No group"),
+                project: p,
+              };
+            })
+          ),
           { placeHolder: vscode.l10n.t("Select the project you want to rename/edit") }
         );
 
@@ -193,9 +204,10 @@ export function registerProjectManagement(
         return;
       }
 
+      const currentGroup = await storage.getProjectGroupPath(project.id);
       const newGroup = await vscode.window.showInputBox({
         prompt: vscode.l10n.t("Enter new group (use '/' for subfolders or leave blank for none)"),
-        value: project.group || "",
+        value: currentGroup || "",
       });
 
       if (newGroup === undefined) {
@@ -267,7 +279,7 @@ export function registerProjectManagement(
             for (const item of found) {
               const resolved = path.resolve(item.path);
               if (!existingPaths.has(resolved)) {
-                await storage.addProject(item.name, item.path, item.group);
+                await storage.addProject(item.name, item.path, item.groupPath);
                 existingPaths.add(resolved);
                 newCount++;
               }
@@ -295,24 +307,27 @@ export function registerProjectManagement(
 
       const sorted = [...projects].sort((a, b) => b.lastAccessed - a.lastAccessed);
 
-      const items = sorted.map((p) => {
-        let label = p.name;
-        if (p.group) {
-          label = `$(folder) [${p.group}] ${p.name}`;
-        }
+      const items = await Promise.all(
+        sorted.map(async (p) => {
+          let label = p.name;
+          const groupPath = await storage.getProjectGroupPath(p.id);
+          if (groupPath) {
+            label = `$(folder) [${groupPath}] ${p.name}`;
+          }
 
-        let description = p.path;
-        if (p.tags && p.tags.length > 0) {
-          description += ` • $(tag) ${p.tags.join(", ")}`;
-        }
+          let description = p.path;
+          if (p.tags && p.tags.length > 0) {
+            description += ` • $(tag) ${p.tags.join(", ")}`;
+          }
 
-        return {
-          label,
-          description,
-          detail: p.notes,
-          project: p,
-        };
-      });
+          return {
+            label,
+            description,
+            detail: p.notes,
+            project: p,
+          };
+        })
+      );
 
       const picked = await vscode.window.showQuickPick(items, {
         placeHolder: vscode.l10n.t("Search by project name, group or path..."),
@@ -373,7 +388,7 @@ export function registerProjectManagement(
         const template = (storage.constructor as any).getDefaultTemplate
           ? (storage.constructor as any).getDefaultTemplate()
           : [];
-        await storage.saveProjects(template);
+        await storage.saveProjectsTree(template);
         refreshCallback();
       }
 

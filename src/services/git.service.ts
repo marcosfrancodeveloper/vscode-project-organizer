@@ -5,8 +5,8 @@ import { GitStatus } from "../interfaces/models.interface";
 import { IGitService } from "../interfaces/services.interface";
 
 /**
- * Serviço responsável por monitorar o status do controle de versão Git nos repositórios locais.
- * Implementa a interface IGitService.
+ * Serviço responsável por monitorar o status do controle de versão Git nos repositórios locais
+ * @implements Implementa a interface `IGitService`
  */
 export class GitService implements IGitService {
   /**
@@ -41,7 +41,9 @@ export class GitService implements IGitService {
   }
 
   /**
-   * Verifica se o diretório do projeto possui um repositório Git inicializado.
+   * Verifica se o diretório do projeto possui um repositório Git inicializado
+   * @param projectPath Caminho do projeto
+   * @returns `true` se for um repositório Git, `false` caso contrário
    */
   public isGitRepository(projectPath: string): boolean {
     if (!projectPath || typeof projectPath !== "string") {
@@ -56,7 +58,9 @@ export class GitService implements IGitService {
   }
 
   /**
-   * Executa comandos assíncronos para obter o status atual do Git em um repositório.
+   * Executa comandos assíncronos para obter o status atual do Git em um repositório
+   * @param projectPath Caminho do projeto
+   * @returns Status do Git ou `null` se não for um repositório Git
    */
   public async getStatus(projectPath: string): Promise<GitStatus | null> {
     if (!this.isGitRepository(projectPath)) {

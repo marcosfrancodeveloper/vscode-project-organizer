@@ -52,7 +52,7 @@ describe("ProjectScanner", () => {
       {
         name: "my-project",
         path: "/projects/my-project",
-        group: undefined
+        groupPath: undefined
       }
     ]);
   });
@@ -99,17 +99,17 @@ describe("ProjectScanner", () => {
       {
         name: "project-1",
         path: path.resolve("/projects/client-a/project-1"),
-        group: "client-a"
+        groupPath: "client-a"
       },
       {
         name: "project-2",
         path: path.resolve("/projects/client-a/project-2"),
-        group: "client-a"
+        groupPath: "client-a"
       },
       {
         name: "client-b",
         path: path.resolve("/projects/client-b"),
-        group: undefined
+        groupPath: undefined
       }
     ]);
   });
@@ -161,7 +161,7 @@ describe("ProjectScanner", () => {
       {
         name: "my-app",
         path: path.resolve("/projects/my-app"),
-        group: undefined
+        groupPath: undefined
       }
     ]);
     expect(mockedReaddir).not.toHaveBeenCalledWith(expect.stringContaining("node_modules"));
