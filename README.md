@@ -1,6 +1,8 @@
-[![](https://img.shields.io/open-vsx/v/marcosfrancodeveloper/project-organizer.svg)](https://open-vsx.org/extension/marcosfrancodeveloper/project-organizer)
-[![](https://img.shields.io/open-vsx/dt/marcosfrancodeveloper/project-organizer.svg)](https://open-vsx.org/extension/marcosfrancodeveloper/project-organizer)
-[![](https://img.shields.io/github/actions/workflow/status/marcosfrancodeveloper/vscode-project-organizer/main.yml?branch=main&label=CI)](https://github.com/marcosfrancodeveloper/vscode-project-organizer/actions/workflows/main.yml)
+[![VS Marketplace](https://img.shields.io/badge/VS%20Marketplace-Extension-007ACC?logo=visual-studio-code&logoColor=white)](https://marketplace.visualstudio.com/items?itemName=marcosfrancodeveloper.project-organizer)
+[![Open VSX Version](https://img.shields.io/open-vsx/v/marcosfrancodeveloper/project-organizer?label=Open%20VSX&logo=eclipse-che)](https://open-vsx.org/extension/marcosfrancodeveloper/project-organizer)
+[![Open VSX Downloads](https://img.shields.io/open-vsx/dt/marcosfrancodeveloper/project-organizer)](https://open-vsx.org/extension/marcosfrancodeveloper/project-organizer)
+[![CI Status](https://img.shields.io/github/actions/workflow/status/marcosfrancodeveloper/vscode-project-organizer/main.yml?branch=main&label=CI&logo=github-actions)](https://github.com/marcosfrancodeveloper/vscode-project-organizer/actions/workflows/main.yml)
+
 
 <p align="center">
   <br />
