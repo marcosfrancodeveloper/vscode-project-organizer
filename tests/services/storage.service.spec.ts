@@ -272,6 +272,29 @@ describe("StorageService", () => {
       expect(writtenContent["NewGroup"]["Target Project"].notes).toBe("new notes");
     });
 
+    it("should retain its original group if group is not updated", async () => {
+      mockedExistsSync.mockReturnValue(true);
+      mockedReadFile.mockResolvedValue(JSON.stringify({
+        "SomeGroup": {
+          "Target Project": {
+            "id": "target-id",
+            "path": "/path/target",
+            "notes": "old notes",
+            "lastAccessed": 123
+          }
+        }
+      }));
+
+      await storageService.updateProject("target-id", {
+        notes: "new notes"
+      });
+
+      expect(mockedWriteFile).toHaveBeenCalled();
+      const writtenContent = JSON.parse(mockedWriteFile.mock.calls[0][1]);
+      expect(writtenContent["SomeGroup"]["Target Project"].notes).toBe("new notes");
+      expect(writtenContent["Target Project"]).toBeUndefined();
+    });
+
     it("should throw if target project ID does not exist", async () => {
       mockedExistsSync.mockReturnValue(true);
       mockedReadFile.mockResolvedValue(JSON.stringify({}));

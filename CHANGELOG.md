@@ -4,6 +4,14 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.1] - 2026-06-06
+
+### Added
+- **Asian Language Support (i18n)**: Implemented full translation support for Japanese (`ja`) and Simplified Chinese (`zh-cn`) in package manifests and runtime dialogs.
+
+### Fixed
+- **Group Dislocation on Updates**: Fixed a critical bug in `StorageService.updateProject` where updating properties like position, accessing a project, favoriting, or deprecating without an explicit `group` payload incorrectly dislocated the project to the root registry.
+
 ## [1.1.0] - 2026-06-06
 
 ### Added

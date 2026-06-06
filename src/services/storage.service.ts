@@ -553,6 +553,11 @@ export class StorageService implements IStorageManager {
   ): Promise<void> {
     const tree = await this.getProjectsTree();
 
+    if (updates.group === undefined) {
+      const currentGroup = await this.getProjectGroupPath(id);
+      updates.group = currentGroup || "";
+    }
+
     let projectToUpdate: Project | undefined;
 
     // 1. Remove o projeto de seu local atual para re-parenting se o grupo for atualizado
