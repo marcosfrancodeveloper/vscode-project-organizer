@@ -4,7 +4,14 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
----
+## [1.0.4] - 2026-06-06
+
+### Added
+- **VS Code Marketplace Publishing**: Integrated `@vscode/vsce` publish step into the GitHub Actions release workflow.
+- **Refresh Command Registration**: Programmatically registered the `projectOrganizer.refresh` command to make sure the side tree reloads correctly from the UI.
+
+### Changed
+- **NPM Script Separation**: Separated publication commands in `package.json` into `publish:ovsx` and `publish:vsce` for clarity and modularity.
 
 ## [1.0.3] - 2026-06-03
 
